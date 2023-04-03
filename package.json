@@ -1,0 +1,8 @@
+{
+  "name": "true-salary-story-client-api",
+  "version": "1.0.0",
+  "main": "app.js",
+  "repository": "git@github.com:wuzhe0912/true-salary-story-client-api.git",
+  "author": "Pitt Wu <kgb00128@gmail.com>",
+  "license": "MIT"
+}
