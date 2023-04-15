@@ -17,3 +17,9 @@ true-salary-story-client-api/
 │ ├── models/
 │ │ ├── user.js
 ```
+
+## How to generate JWT_SECRET
+
+```bash
+openssl rand -base64 32
+```
