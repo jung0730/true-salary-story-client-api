@@ -1,18 +1,28 @@
+// Group all require statements together
+require('module-alias/register');
+require('dotenv').config();
 const express = require('express');
-const logger = require('morgan');
 const cors = require('cors');
-const passport = require('@/config/passport');
-const db = require('@/config/database');
+const connectDB = require('config/database');
+const authRoutes = require('routes/auth');
+const passport = require('passport');
+require('config/passport');
 
-const authRouter = require('../controllers/authController');
-
+// Initialize Express application
 const app = express();
 
-app.use(logger('dev'));
+// Connect to the database
+connectDB();
+
+// Configure middleware
 app.use(cors());
-app.use(express.json());
 app.use(passport.initialize());
 
-app.use('/auth', authRouter);
+// Set up routes
+app.use('/auth', authRoutes);
 
-module.exports = app;
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
