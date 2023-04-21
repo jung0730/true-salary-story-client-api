@@ -9,6 +9,8 @@ true-salary-story-client-api/
 │ ├── config/
 │ │ ├── database.js
 │ │ ├── passport.js
+│ ├── middlewares/
+│ │ ├── jwtAuthMiddleware.js
 │ ├── models/
 │ │ ├── User.js
 │ ├── routes/
