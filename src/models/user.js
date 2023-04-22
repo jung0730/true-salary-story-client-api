@@ -19,6 +19,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  loginTimestamp: {
+    type: Date,
+  },
+  logoutTimestamp: {
+    type: Date,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
