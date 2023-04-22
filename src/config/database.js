@@ -1,14 +1,12 @@
+const config = require('config');
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(
-      'mongodb://localhost:27017/true-salary-story-client',
-      {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      },
-    );
+    await mongoose.connect(config.database.mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
     console.log('MongoDB connected successfully');
   } catch (error) {

@@ -7,14 +7,17 @@ true-salary-story-client-api/
 ├── src/
 │ ├── app.js
 │ ├── config/
+│ │ ├── index.js
 │ │ ├── database.js
 │ │ ├── passport.js
-│ ├── middlewares/
+│ ├── middleware/
 │ │ ├── jwtAuthMiddleware.js
 │ ├── models/
 │ │ ├── User.js
 │ ├── routes/
 │ │ ├── auth.js
+│ │ ├── social.js
+│ │ ├── user.js
 ├── .env
 ├── .gitignore
 ```

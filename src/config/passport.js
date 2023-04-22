@@ -1,3 +1,4 @@
+const config = require('config');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
@@ -5,11 +6,7 @@ const User = require('models/User');
 
 passport.use(
   new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/auth/google/callback',
-    },
+    config.passport.google,
     async (accessToken, refreshToken, profile, done) => {
       try {
         // Check if the user already exists in the database.
@@ -26,7 +23,7 @@ passport.use(
         }
 
         // Create a JSON Web Token (JWT) for the user.
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        const token = jwt.sign({ id: user.id }, config.jwtSecret, {
           expiresIn: '1h',
         });
 
