@@ -19,7 +19,12 @@ passport.use(
             displayName: profile.displayName,
             email: profile.emails[0].value,
             profilePicture: profile.photos[0].value,
+            loginTimestamp: new Date(),
           });
+        } else {
+          // Update the login timestamp for the existing user.
+          user.loginTimestamp = new Date();
+          await user.save();
         }
 
         // Create a JSON Web Token (JWT) for the user.
