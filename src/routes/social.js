@@ -2,6 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const passport = require('passport');
+const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
 
 router.get(
   '/google',
@@ -12,7 +13,7 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { session: false }),
   (req, res) => {
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${req.user.token}`);
+    res.redirect(`${frontendURL}/login?token=${req.user.token}`);
   },
 );
 
