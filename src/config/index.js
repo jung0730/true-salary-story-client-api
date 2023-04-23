@@ -1,6 +1,6 @@
 module.exports = {
   database: {
-    mongoURI: 'mongodb://localhost:27017/true-salary-story-client',
+    mongoURI: process.env.MONGODB_URI,
   },
   passport: {
     google: {
