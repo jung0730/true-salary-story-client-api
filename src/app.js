@@ -4,7 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('config/database');
-const authRoutes = require('routes/auth');
+const routes = require('routes');
 const passport = require('passport');
 require('config/passport');
 
@@ -19,7 +19,7 @@ app.use(cors());
 app.use(passport.initialize());
 
 // Set up routes
-app.use('/auth', authRoutes);
+app.use('/', routes);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
