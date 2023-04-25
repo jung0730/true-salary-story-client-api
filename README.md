@@ -15,6 +15,7 @@ true-salary-story-client-api/
 │ ├── models/
 │ │ ├── User.js
 │ ├── routes/
+│ │ ├── index.js
 │ │ ├── auth.js
 │ │ ├── social.js
 │ │ ├── user.js

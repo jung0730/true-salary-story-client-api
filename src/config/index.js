@@ -6,7 +6,7 @@ module.exports = {
     google: {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/auth/social/google/callback',
+      callbackURL: '/social/google/callback',
     },
   },
   jwtSecret: process.env.JWT_SECRET,
