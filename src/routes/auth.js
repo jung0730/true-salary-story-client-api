@@ -17,11 +17,7 @@ router.post('/logout', jwtAuthMiddleware, async (req, res) => {
       data: null,
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Server error',
-      data: null,
-    });
+    next(error);
   }
 });
 

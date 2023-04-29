@@ -9,13 +9,19 @@ router.get(
   passport.authenticate('google', { scope: ['profile', 'email'] }),
 );
 
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false }),
-  (req, res) => {
-    res.redirect(`${frontendURL}/login?token=${req.user.token}`);
-  },
-);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) {
+      return next(err);
+    }
+
+    if (!user) {
+      return next({ message: 'Authentication failed', statusCode: 401 });
+    }
+
+    res.redirect(`${frontendURL}/login?token=${user.token}`);
+  })(req, res, next);
+});
 
 // 預期擴增 Line Login
 
