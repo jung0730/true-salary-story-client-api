@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const passport = require('passport');
-const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
+const frontendURL = process.env.FRONTEND_DEV_URL || 'http://localhost:3001';
 
 router.get(
   '/google',
