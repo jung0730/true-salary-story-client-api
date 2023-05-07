@@ -12,9 +12,7 @@ true-salary-story-client-api/
 │ │ ├── passport.js
 │ ├── middleware/
 │ │ ├── jwtAuthMiddleware.js
-│ │ ├── errorHandler.js
 │ ├── models/
-│ │ ├── Point.js
 │ │ ├── User.js
 │ ├── routes/
 │ │ ├── index.js
