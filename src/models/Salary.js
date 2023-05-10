@@ -41,7 +41,7 @@ const SalarySchema = new mongoose.Schema(
       default: '待審核',
     },
     rejectReason: { type: String },
-    seen: { type: Number },
+    seen: { type: Number, default: 0 },
     createUser: { type: String },
     createDate: { type: Date, default: Date.now },
     updateUser: { type: String },
