@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
 
+const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
@@ -92,8 +94,15 @@ router.get('/salary/:id', async (req, res) => {
   }
 });
 
-router.post('/salary', async (req, res) => {
-  const salary = new Salary(req.body);
+router.post('/salary', jwtAuthMiddleware, async (req, res) => {
+  const { id } = req.user;
+  const payload = {
+    ...req.body,
+    createUser: id,
+    updateUser: id,
+  };
+
+  const salary = new Salary(payload);
 
   try {
     const result = await salary.save();

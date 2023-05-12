@@ -42,9 +42,15 @@ const SalarySchema = new mongoose.Schema(
     },
     rejectReason: { type: String },
     seen: { type: Number, default: 0 },
-    createUser: { type: String },
+    createUser: { 
+      type: mongoose.Schema.ObjectId,
+      ref: 'User',
+    },
     createDate: { type: Date, default: Date.now },
-    updateUser: { type: String },
+    updateUser: { 
+      type: mongoose.Schema.ObjectId,
+      ref: 'User',
+    },
     updateDate: { type: Date, default: Date.now },
   },
   {
