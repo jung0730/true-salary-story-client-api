@@ -4,6 +4,8 @@ const router = express.Router();
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 const Salary = require('models/Salary');
+const User = require('models/User');
+const Company = require('models/Company');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -38,6 +40,49 @@ router.get('/account/salary/shared/list', jwtAuthMiddleware, async (req, res) =>
       result: data, 
       totalCount
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/account/salary/:id/subscribe', jwtAuthMiddleware, async (req, res) => {
+  const { id: userId } = req.user;
+  const { id: companyId } = req.params;
+  
+  try {
+    const isDuplicate = await User.findById(userId).countDocuments({ 
+      subscribing: { 
+        $elemMatch: { company: companyId }
+      }
+    });
+    if(isDuplicate) {
+      return res.json({ message: '您已訂閱' });
+    }
+
+    const isExist = await Company.findById(companyId).exec();
+    if(!isExist) {
+      return res.status(400).json({ message: '查無此公司' });
+    }
+
+    await User.updateOne(
+      {
+        _id: userId,
+      },
+      {
+        $addToSet: { subscribing: { company: companyId } }
+      }
+    );
+
+    await Company.updateOne(
+      {
+        _id: companyId,
+      },
+      {
+        $addToSet: { subscribed: { user: userId } }
+      }
+    );
+
+    res.json({ message: '訂閱成功' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
