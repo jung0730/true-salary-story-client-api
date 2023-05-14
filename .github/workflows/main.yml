@@ -7,6 +7,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    environment: 
+      name: PROD
     steps:
       - name: Updating Code from Github Actions
         uses: appleboy/ssh-action@master
