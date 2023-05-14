@@ -1,0 +1,21 @@
+name: Github Action Automation
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Updating Code from Github Actions
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/true-salary-story-client-api
+            git pull
+            yarn install
+            sudo pm2 restart true-salary-story-client-api
