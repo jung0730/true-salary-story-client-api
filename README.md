@@ -5,24 +5,33 @@
 ```markdown
 true-salary-story-client-api/
 ├── src/
-│ ├── app.js
 │ ├── config/
-│ │ ├── index.js
+│ │ ├── pay
+│ │ │ ├── linePay.js
 │ │ ├── database.js
+│ │ ├── index.js
 │ │ ├── passport.js
 │ ├── middleware/
-│ │ ├── jwtAuthMiddleware.js
 │ │ ├── errorHandler.js
+│ │ ├── jwtAuthMiddleware.js
 │ ├── models/
+│ │ ├── Company.js
 │ │ ├── Point.js
+│ │ ├── Salary.js
+│ │ ├── Transaction.js
 │ │ ├── User.js
 │ ├── routes/
-│ │ ├── index.js
+│ │ ├── pay
+│ │ │ ├── linePay.js
+│ │ ├── account.js
 │ │ ├── auth.js
+│ │ ├── company.js
+│ │ ├── index.js
+│ │ ├── salary.js
 │ │ ├── social.js
 │ │ ├── user.js
+│ ├── app.js
 ├── .env
-├── .gitignore
 ```
 
 ## How to generate JWT_SECRET
