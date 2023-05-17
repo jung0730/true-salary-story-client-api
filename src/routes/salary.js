@@ -5,6 +5,14 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
 
+const jwt = require('jsonwebtoken');
+
+const getUserIdFromJWT = (req) => {
+  const token = req.headers.authorization.split(' ')[1];
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  return decoded.id;
+};
+
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 router.use(express.json());
@@ -94,12 +102,10 @@ router.get('/salary/:id', async (req, res) => {
   }
 });
 
-router.post('/salary', jwtAuthMiddleware, async (req, res) => {
-  const { id } = req.user;
+router.post('/salary', async (req, res) => {
   const payload = {
     ...req.body,
-    createUser: id,
-    updateUser: id,
+    createUser: getUserIdFromJWT(req),
   };
 
   const post = new Post(payload);
