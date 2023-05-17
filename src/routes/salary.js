@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('models/Post');
+const Company = require('models/Company');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
@@ -11,6 +12,10 @@ const getUserIdFromJWT = (req) => {
   const token = req.headers.authorization.split(' ')[1];
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   return decoded.id;
+};
+
+const formatDate = (date) => {
+  return new Date(date).toISOString().substring(0, 10);
 };
 
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
@@ -73,6 +78,104 @@ router.get('/salary/getTopPost', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.get('/salary/search', async (req, res) => {
+  const { companyName, type, title } = req.query;
+  const titleResults = [];
+  const companyResults = [];
+  const typeResults = [];
+
+  try {
+    if (title) {
+      const regex = new RegExp(title, 'i');
+      const postResults = await Post.find({ title: { $regex: regex } }).exec();
+      titleResults.push(
+        ...postResults.map((post) => ({
+          postId: post._id,
+          title: post.title,
+          companyName: post.companyName,
+          createDate: formatDate(post.createDate),
+        })),
+      );
+
+      const companyResultsByPost = await Company.find({
+        _id: { $in: postResults.map((post) => post.company) },
+      }).exec();
+      for (const company of companyResultsByPost) {
+        const latestPost = postResults.find(
+          (post) => post.company.toString() === company._id.toString(),
+        );
+        const latestPostTitle = latestPost ? latestPost.title : null;
+        companyResults.push({
+          companyName: company.companyName,
+          taxId: company.taxId,
+          latestPostCreateDate: latestPost ? latestPost.createDate : null,
+          latestPostTitle: latestPostTitle ? [latestPostTitle] : [],
+        });
+      }
+    }
+
+    if (companyName) {
+      const regex = new RegExp(companyName, 'i');
+      const companyResultsByCompanyName = await Company.find({
+        companyName: { $regex: regex },
+      }).exec();
+      for (const company of companyResultsByCompanyName) {
+        const latestPost = await Post.findOne({ company: company._id })
+          .sort({ createDate: -1 })
+          .exec();
+        const latestPostTitle = latestPost ? latestPost.title : null;
+        companyResults.push({
+          companyName: company.companyName,
+          taxId: company.taxId,
+          latestPostCreateDate: latestPost
+            ? formatDate(latestPost.createDate)
+            : null,
+          latestPostTitle: latestPostTitle ? [latestPostTitle] : [],
+        });
+      }
+    }
+
+    if (type) {
+      const regex = new RegExp(type, 'i');
+      const companyResultsByType = await Company.find({
+        type: { $regex: regex },
+      }).exec();
+      for (const company of companyResultsByType) {
+        const postCount = await Post.countDocuments({
+          company: company._id,
+          status: 'approved',
+        }).exec();
+        typeResults.push({
+          companyName: company.companyName,
+          taxId: company.taxId,
+          type: company.type,
+          address: company.address,
+          phone: company.phone,
+          postCount: postCount.toString(),
+        });
+      }
+    }
+
+    const titleResultsCount = titleResults.length;
+    const companyResultsCount = companyResults.length;
+    const typeResultsCount = typeResults.length;
+
+    res.json({
+      message: '成功',
+      titleResults,
+      companyResults,
+      typeResults,
+      titleResultsCount,
+      companyResultsCount,
+      typeResultsCount,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;
 
 router.get('/salary/getTopCompany', async (req, res) => {
   try {
