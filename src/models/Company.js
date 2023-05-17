@@ -4,64 +4,64 @@ const CompanySchema = new mongoose.Schema(
   {
     companyName: {
       type: String,
-      required: true
+      required: true,
     },
     taxId: {
       type: String,
-      required: true
+      required: true,
     },
     type: {
       type: String,
-      required: true
+      required: true,
     },
     address: {
       type: String,
-      required: true
+      required: true,
     },
     phone: {
       type: String,
-      required: true
+      required: true,
     },
     photo: {
       type: String,
-      required: false
+      required: false,
     },
     shared: {
       type: String,
-      required: false
+      required: false,
     },
-    createUser: { 
+    createUser: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
     },
     createDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
-    updateUser: { 
+    updateUser: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
     },
     updateDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     subscribed: [
       {
-        user: { 
+        user: {
           type: mongoose.Schema.ObjectId,
-          ref: 'User'
+          ref: 'User',
         },
         createdAt: {
           type: Date,
-          default: Date.now
-        }
-      }
+          default: Date.now,
+        },
+      },
     ],
   },
   {
     versionKey: false,
-  }
+  },
 );
 
 const Company = mongoose.model('Company', CompanySchema);

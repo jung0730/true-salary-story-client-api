@@ -36,15 +36,15 @@ const UserSchema = new mongoose.Schema({
   },
   subscribing: [
     {
-      company: { 
+      company: {
         type: mongoose.Schema.ObjectId,
-        ref: 'Company'
+        ref: 'Company',
       },
       createdAt: {
         type: Date,
-        default: Date.now
-      }
-    }
+        default: Date.now,
+      },
+    },
   ],
 });
 

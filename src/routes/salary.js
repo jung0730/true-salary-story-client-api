@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Salary = require('models/Salary');
+const Post = require('models/Post');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
@@ -50,12 +50,12 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
 
 router.get('/salary/getTopPost', async (req, res) => {
   try {
-    const latestPost = await Salary.find({}, postProjection)
+    const latestPost = await Post.find({}, postProjection)
       .sort({ createDate: -1 })
       .limit(15)
       .exec();
 
-    const popularPost = await Salary.find({}, postProjection)
+    const popularPost = await Post.find({}, postProjection)
       .sort({ seen: -1 })
       .limit(15)
       .exec();
@@ -74,17 +74,17 @@ router.get('/salary/:id', async (req, res) => {
   }
 
   try {
-    const salary = await Salary.findById(id);
-    if (!salary) {
+    const post = await Post.findById(id);
+    if (!post) {
       return res.status(404).json({
-        message: 'Salary not found',
+        message: 'Post not found',
         result: [],
       });
     }
 
     return res.status(200).json({
       message: 'Success',
-      result: salary,
+      result: post,
     });
   } catch (error) {
     return res.status(500).json({
@@ -102,10 +102,10 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
     updateUser: id,
   };
 
-  const salary = new Salary(payload);
+  const post = new Post(payload);
 
   try {
-    const result = await salary.save();
+    const result = await post.save();
     return res.status(200).json({
       message: '成功',
       result: [
