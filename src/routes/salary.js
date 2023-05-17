@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Post = require('models/Post');
 const Company = require('models/Company');
+const Keyword = require('models/Keyword');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
@@ -59,6 +60,25 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
       console.error(error);
       res.status(500).json({ error: 'An error occurred' });
     });
+});
+
+router.get('/salary/getTopKeyword', async (req, res) => {
+  try {
+    const keywords = await Keyword.find({})
+      .sort({ rank: 1 })
+      .limit(25)
+      .select('keyword -_id')
+      .exec();
+
+    const keywordList = keywords.map((keyword) => keyword.keyword);
+
+    res.json({
+      message: '成功',
+      keywords: keywordList,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get('/salary/getTopPost', async (req, res) => {
@@ -174,8 +194,6 @@ router.get('/salary/search', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-module.exports = router;
 
 router.get('/salary/getTopCompany', async (req, res) => {
   try {
