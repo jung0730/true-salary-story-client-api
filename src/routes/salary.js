@@ -74,6 +74,36 @@ router.get('/salary/getTopPost', async (req, res) => {
   }
 });
 
+router.get('/salary/getTopCompany', async (req, res) => {
+  try {
+    const topCompanies = await Post.aggregate([
+      { $match: { status: 'approved' } },
+      {
+        $group: {
+          _id: '$taxId',
+          taxId: { $first: '$taxId' },
+          companyName: { $first: '$companyName' },
+          postCount: { $sum: 1 },
+        },
+      },
+      { $sort: { postCount: -1 } },
+      { $limit: 30 },
+      {
+        $project: {
+          _id: 0,
+          taxId: 1,
+          companyName: 1,
+          postCount: 1,
+        },
+      },
+    ]);
+
+    res.json({ message: '成功', companies: topCompanies });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/salary/:id', async (req, res) => {
   const id = req.params.id;
 
@@ -102,7 +132,7 @@ router.get('/salary/:id', async (req, res) => {
   }
 });
 
-router.post('/salary', async (req, res) => {
+router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const payload = {
     ...req.body,
     createUser: getUserIdFromJWT(req),
