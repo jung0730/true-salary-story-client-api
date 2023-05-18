@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const express = require('express');
 const router = express.Router();
+const isValidObjectId = mongoose.Types.ObjectId.isValid;
 
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
@@ -60,6 +62,15 @@ router.post(
     const { id: companyId } = req.params;
 
     try {
+      if (!isValidObjectId(companyId)) {
+        return res.status(400).json({ message: 'Id格式錯誤' });
+      }
+
+      const isExist = await Company.findById(companyId).exec();
+      if (!isExist) {
+        return res.status(400).json({ message: '查無此公司' });
+      }
+
       const isDuplicate = await User.findById(userId).countDocuments({
         subscribing: {
           $elemMatch: { company: companyId },
@@ -67,11 +78,6 @@ router.post(
       });
       if (isDuplicate) {
         return res.json({ message: '您已訂閱' });
-      }
-
-      const isExist = await Company.findById(companyId).exec();
-      if (!isExist) {
-        return res.status(400).json({ message: '查無此公司' });
       }
 
       await User.updateOne(
@@ -93,6 +99,48 @@ router.post(
       );
 
       res.json({ message: '訂閱成功' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+router.delete(
+  '/account/salary/:id/subscribe',
+  jwtAuthMiddleware,
+  async (req, res) => {
+    const { id: userId } = req.user;
+    const { id: companyId } = req.params;
+
+    try {
+      if (!isValidObjectId(companyId)) {
+        return res.status(400).json({ message: 'Id格式錯誤' });
+      }
+
+      const isExist = await Company.findById(companyId).exec();
+      if (!isExist) {
+        return res.status(400).json({ message: '查無此公司' });
+      }
+
+      await User.updateOne(
+        {
+          _id: userId,
+        },
+        {
+          $pull: { subscribing: { company: companyId } },
+        },
+      );
+
+      await Company.updateOne(
+        {
+          _id: companyId,
+        },
+        {
+          $pull: { subscribed: { user: userId } },
+        },
+      );
+
+      res.json({ message: '您已成功取消訂閱' });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
