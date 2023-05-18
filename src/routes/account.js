@@ -147,4 +147,45 @@ router.delete(
   },
 );
 
+router.get(
+  '/account/salary/following/list',
+  jwtAuthMiddleware,
+  async (req, res) => {
+    const { id } = req.user;
+
+    const { keyword } = req.query;
+    let { page } = req.query;
+    const { limit: perPage } = req.query;
+
+    try {
+      if (!page) {
+        page = 1;
+      }
+
+      const data = await User.findById(id)
+        .populate({
+          path: 'subscribing',
+          populate: {
+            path: 'company',
+            select: 'companyName photo address shared',
+          },
+        })
+        .skip((page - 1) * perPage)
+        .limit(perPage)
+        .select('subscribing');
+
+      const filterData = data.subscribing.filter((o) =>
+        o.company.companyName.includes(keyword),
+      );
+
+      res.json({
+        result: filterData,
+        totalCount: filterData.length,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 module.exports = router;
