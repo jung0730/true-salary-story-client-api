@@ -53,8 +53,6 @@ router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
 const postProjection = {
-  _id: 0,
-  postId: '$_id',
   title: 1,
   companyName: 1,
   feeling: 1,
@@ -276,7 +274,6 @@ router.get('/salary/getTopCompany', async (req, res) => {
       { $limit: 30 },
       {
         $project: {
-          _id: 0,
           taxId: 1,
           companyName: 1,
           postCount: 1,

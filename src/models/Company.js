@@ -64,6 +64,15 @@ const CompanySchema = new mongoose.Schema(
   },
 );
 
+CompanySchema.set('toJSON', {
+  getters: true,
+  transform: (doc, ret) => {
+    ret.companyId = ret._id;
+    delete ret._id;
+    delete ret.id;
+  },
+});
+
 const Company = mongoose.model('Company', CompanySchema);
 
 module.exports = Company;
