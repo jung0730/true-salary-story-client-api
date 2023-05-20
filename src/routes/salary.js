@@ -160,73 +160,79 @@ router.get('/salary/getTopPost', async (req, res) => {
 });
 
 router.get('/salary/search', async (req, res) => {
-  const { companyName, type, title } = req.query;
-  const titleResults = [];
-  const companyResults = [];
-  const typeResults = [];
+  const { companyName, type, title, page, limit } = req.query;
+
+  if (
+    (companyName && (type || title)) ||
+    (type && (companyName || title)) ||
+    (title && (companyName || type))
+  ) {
+    return res.status(400).json({
+      message: '只能傳入一個參數 (companyName, type 或 title)',
+    });
+  }
+
+  const options = {};
+  const results = {};
 
   try {
     if (title) {
       const regex = new RegExp(title, 'i');
-      const postResults = await Post.find({ title: { $regex: regex } }).exec();
-      titleResults.push(
-        ...postResults.map((post) => ({
-          postId: post._id,
-          title: post.title,
-          companyName: post.companyName,
-          createDate: formatDate(post.createDate),
-        })),
-      );
+      const titleResults = await Post.find({ title: { $regex: regex } })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec();
+      results.titleResults = titleResults.map((post) => ({
+        postId: post._id,
+        title: post.title,
+        companyName: post.companyName,
+        createDate: formatDate(post.createDate),
+        jobDescription: post.jobDescription.substring(0, 10),
+        suggestion: post.suggestion.substring(0, 10),
+      }));
 
-      const companyResultsByPost = await Company.find({
-        _id: { $in: postResults.map((post) => post.company) },
+      options.titleResultsCount = await Post.countDocuments({
+        title: { $regex: regex },
       }).exec();
-      for (const company of companyResultsByPost) {
-        const latestPost = postResults.find(
-          (post) => post.company.toString() === company._id.toString(),
-        );
-        const latestPostTitle = latestPost ? latestPost.title : null;
-        companyResults.push({
-          companyName: company.companyName,
-          taxId: company.taxId,
-          latestPostCreateDate: latestPost ? latestPost.createDate : null,
-          latestPostTitle: latestPostTitle ? [latestPostTitle] : [],
-        });
-      }
-    }
-
-    if (companyName) {
+    } else if (companyName) {
       const regex = new RegExp(companyName, 'i');
       const companyResultsByCompanyName = await Company.find({
         companyName: { $regex: regex },
       }).exec();
+      results.companyResults = [];
+
       for (const company of companyResultsByCompanyName) {
-        const latestPost = await Post.findOne({ company: company._id })
+        const latestPosts = await Post.find({ company: company.name })
           .sort({ createDate: -1 })
+          .limit(3)
           .exec();
-        const latestPostTitle = latestPost ? latestPost.title : null;
-        companyResults.push({
+        const latestPostTitles = latestPosts.map((post) => post.title);
+
+        results.companyResults.push({
           companyName: company.companyName,
           taxId: company.taxId,
-          latestPostCreateDate: latestPost
-            ? formatDate(latestPost.createDate)
-            : null,
-          latestPostTitle: latestPostTitle ? [latestPostTitle] : [],
+          latestPostCreateDate:
+            latestPosts.length > 0
+              ? formatDate(latestPosts[0].createDate)
+              : null,
+          latestPostTitle: latestPostTitles,
         });
       }
-    }
 
-    if (type) {
+      options.companyResultsCount = companyResultsByCompanyName.length;
+    } else if (type) {
       const regex = new RegExp(type, 'i');
       const companyResultsByType = await Company.find({
         type: { $regex: regex },
       }).exec();
+      results.typeResults = [];
+
       for (const company of companyResultsByType) {
         const postCount = await Post.countDocuments({
           company: company._id,
           status: 'approved',
         }).exec();
-        typeResults.push({
+        results.typeResults.push({
           companyName: company.companyName,
           taxId: company.taxId,
           type: company.type,
@@ -235,20 +241,14 @@ router.get('/salary/search', async (req, res) => {
           postCount: postCount.toString(),
         });
       }
-    }
 
-    const titleResultsCount = titleResults.length;
-    const companyResultsCount = companyResults.length;
-    const typeResultsCount = typeResults.length;
+      options.typeResultsCount = companyResultsByType.length;
+    }
 
     res.json({
       message: '成功',
-      titleResults,
-      companyResults,
-      typeResults,
-      titleResultsCount,
-      companyResultsCount,
-      typeResultsCount,
+      ...results,
+      ...options,
     });
   } catch (error) {
     res.status(500).json({
