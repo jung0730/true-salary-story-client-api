@@ -19,7 +19,12 @@ const formatDate = (date) => {
   return new Date(date).toISOString().substring(0, 10);
 };
 
-const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const findCompanyTypeByTaxId = async (taxId) => {
+  const company = await Company.findOne({ taxId });
+  return company ? company.type : null;
+};
+
+// const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -58,7 +63,10 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
     })
     .catch((error) => {
       console.error(error);
-      res.status(500).json({ error: 'An error occurred' });
+      res.status(500).json({
+        message: '伺服器錯誤',
+        result: error,
+      });
     });
 });
 
@@ -77,7 +85,10 @@ router.get('/salary/getTopKeyword', async (req, res) => {
       keywords: keywordList,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error,
+    });
   }
 });
 
@@ -95,7 +106,10 @@ router.get('/salary/getTopPost', async (req, res) => {
 
     res.json({ message: '成功', latestPost, popularPost });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error,
+    });
   }
 });
 
@@ -191,7 +205,10 @@ router.get('/salary/search', async (req, res) => {
       typeResultsCount,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error,
+    });
   }
 });
 
@@ -221,7 +238,10 @@ router.get('/salary/getTopCompany', async (req, res) => {
 
     res.json({ message: '成功', companies: topCompanies });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error,
+    });
   }
 });
 
@@ -229,31 +249,37 @@ router.get('/salary/:id', async (req, res) => {
   const id = req.params.id;
 
   if (!isValidObjectId(id)) {
-    return res.status(400).json({ message: 'id 格式錯誤' });
+    return res.status(400).json({ message: 'id 格式錯誤或沒有這筆薪資資訊' });
   }
 
   try {
     const post = await Post.findById(id);
     if (!post) {
       return res.status(404).json({
-        message: 'Post not found',
+        message: 'id 格式錯誤或沒有這筆薪資資訊',
         result: [],
       });
     }
 
+    post.seen += 1;
+    await post.save();
+
     return res.status(200).json({
-      message: 'Success',
-      result: post,
+      message: '成功',
+      result: {
+        companyType: await findCompanyTypeByTaxId(post.taxId),
+        ...post.toJSON(),
+      },
     });
   } catch (error) {
     return res.status(500).json({
-      message: 'Server error',
-      result: [],
+      message: '伺服器錯誤',
+      result: error,
     });
   }
 });
 
-router.post('/salary', jwtAuthMiddleware, async (req, res) => {
+router.post('/salary', async (req, res) => {
   const payload = {
     ...req.body,
     createUser: getUserIdFromJWT(req),
@@ -269,7 +295,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
         {
           title: result.title,
           companyName: result.companyName,
-          point: 200,
+          point: 200, // TODO: 依照積分規則調整
         },
       ],
     });
@@ -280,7 +306,10 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
         .status(400)
         .json({ message: '失敗', result: errors.join(', ') });
     }
-    return res.status(500).json({ message: 'Server error', result: [] });
+    return res.status(500).json({
+      message: '伺服器錯誤',
+      result: error,
+    });
   }
 });
 

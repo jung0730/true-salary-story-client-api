@@ -1,8 +1,8 @@
+const mongoose = require('mongoose');
+
 const formatDate = (date) => {
   return new Date(date).toISOString().substring(0, 10);
 };
-
-const mongoose = require('mongoose');
 
 const salaryFieldsValidator = function () {
   const hourlySalarySet = !!this.hourlySalary;
@@ -53,39 +53,48 @@ const postSchema = new mongoose.Schema(
     },
     monthlySalary: {
       type: Number,
+      default: null,
       validate: salaryFieldsValidator,
     },
     dailySalary: {
       type: Number,
+      default: null,
       validate: salaryFieldsValidator,
     },
     avgWorkingDaysPerMonth: {
       type: Number,
-      required: function () {
+      default: null,
+      required: () => {
         return !!this.hourlySalary || !!this.dailySalary;
       },
     },
     hourlySalary: {
       type: Number,
+      default: null,
       validate: salaryFieldsValidator,
     },
     avgHoursPerDay: {
       type: Number,
-      required: function () {
+      default: null,
+      required: () => {
         return !!this.hourlySalary;
       },
     },
     yearEndBonus: {
       type: Number,
+      default: null,
     },
     holidayBonus: {
       type: Number,
+      default: null,
     },
     profitSharingBonus: {
       type: Number,
+      default: null,
     },
     otherBonus: {
       type: Number,
+      default: null,
     },
     yearlySalary: {
       type: Number,
@@ -109,13 +118,16 @@ const postSchema = new mongoose.Schema(
     },
     suggestion: {
       type: String,
+      default: '',
       required: [true, '請輸入您的建議'],
     },
     tags: {
       type: [String],
+      default: [],
     },
     customTags: {
       type: [String],
+      default: [],
     },
     unlockedUsers: {
       type: [
@@ -124,6 +136,7 @@ const postSchema = new mongoose.Schema(
           ref: 'User',
         },
       ],
+      default: [],
       select: false,
     },
     status: {
@@ -133,6 +146,7 @@ const postSchema = new mongoose.Schema(
     },
     rejectReason: {
       type: String,
+      default: '',
       required: function () {
         return this.status === 'rejected';
       },
@@ -149,12 +163,8 @@ const postSchema = new mongoose.Schema(
     },
     updateDate: { type: Date, default: Date.now },
   },
-  { versionKey: false, timestamps: true },
+  { versionKey: false },
 );
-
-postSchema.set('toJSON', {
-  getters: true,
-});
 
 postSchema.path('overtime').get(function (num) {
   const overtimeMap = {
@@ -178,12 +188,21 @@ postSchema.path('feeling').get(function (num) {
   return feelingMap[num];
 });
 
-postSchema.path('createdAt').get(function (date) {
+postSchema.path('createDate').get(function (date) {
   return formatDate(date);
 });
 
-postSchema.path('updatedAt').get(function (date) {
+postSchema.path('updateDate').get(function (date) {
   return formatDate(date);
+});
+
+postSchema.set('toJSON', {
+  getters: true,
+  transform: (doc, ret) => {
+    ret.postId = ret._id;
+    delete ret._id;
+    delete ret.id;
+  },
 });
 
 const Post = mongoose.model('Post', postSchema);
