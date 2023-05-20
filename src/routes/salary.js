@@ -24,7 +24,7 @@ const findCompanyTypeByTaxId = async (taxId) => {
   return company ? company.type : null;
 };
 
-// const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -32,11 +32,37 @@ router.use(express.urlencoded({ extended: true }));
 const postProjection = {
   _id: 0,
   postId: '$_id',
+  unlockedUsers: 0,
   title: 1,
   companyName: 1,
   feeling: 1,
   overtime: 1,
 };
+
+router.post('/salary/:id/permission', async (req, res) => {
+  const postId = req.params.id;
+  const userId = getUserIdFromJWT(req);
+
+  try {
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: '找不到指定的薪資資訊' });
+    }
+
+    if (post.unlockedUsers.includes(userId)) {
+      return res.status(400).json({ message: '使用者已擁有權限' });
+    }
+
+    post.unlockedUsers.push(userId);
+    await post.save();
+
+    return res.status(200).json({ message: '成功' });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: '伺服器錯誤', result: error.message });
+  }
+});
 
 router.get('/salary/uniformNumbers/:number', (req, res) => {
   const number = req.params.number;
@@ -65,7 +91,7 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
       console.error(error);
       res.status(500).json({
         message: '伺服器錯誤',
-        result: error,
+        result: error.message,
       });
     });
 });
@@ -87,7 +113,7 @@ router.get('/salary/getTopKeyword', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });
@@ -108,7 +134,7 @@ router.get('/salary/getTopPost', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });
@@ -207,7 +233,7 @@ router.get('/salary/search', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });
@@ -240,7 +266,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });
@@ -274,12 +300,12 @@ router.get('/salary/:id', async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });
 
-router.post('/salary', async (req, res) => {
+router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const payload = {
     ...req.body,
     createUser: getUserIdFromJWT(req),
@@ -308,7 +334,7 @@ router.post('/salary', async (req, res) => {
     }
     return res.status(500).json({
       message: '伺服器錯誤',
-      result: error,
+      result: error.message,
     });
   }
 });

@@ -137,7 +137,6 @@ const postSchema = new mongoose.Schema(
         },
       ],
       default: [],
-      select: false,
     },
     status: {
       type: String,
@@ -202,6 +201,7 @@ postSchema.set('toJSON', {
     ret.postId = ret._id;
     delete ret._id;
     delete ret.id;
+    delete ret.unlockedUsers;
   },
 });
 
