@@ -27,7 +27,7 @@ const CompanySchema = new mongoose.Schema(
       required: false,
     },
     shared: {
-      type: String,
+      type: Number,
       required: false,
     },
     createUser: {

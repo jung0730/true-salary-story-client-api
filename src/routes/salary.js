@@ -9,6 +9,29 @@ const isValidObjectId = mongoose.Types.ObjectId.isValid;
 
 const jwt = require('jsonwebtoken');
 
+const getCompanyAddress = async (taxId) => {
+  const companyAddress = await axios
+    .get(
+      `https://data.gcis.nat.gov.tw/od/data/api/5F64D864-61CB-4D0D-8AD9-492047CC1EA6?$format=json&$filter=Business_Accounting_NO eq ${taxId}`,
+    )
+    .then((response) => {
+      const data = response.data;
+      return data[0].Company_Location;
+    });
+  return companyAddress;
+};
+const getCompanyType = async (taxId) => {
+  const companyType = await axios
+    .get(
+      `https://data.gcis.nat.gov.tw/od/data/api/236EE382-4942-41A9-BD03-CA0709025E7C?$format=json&$filter=Business_Accounting_NO eq ${taxId}/`,
+    )
+    .then((response) => {
+      const data = response.data;
+      return data[0].Cmp_Business[0].Business_Item_Desc;
+    });
+  return companyType;
+};
+
 const getUserIdFromJWT = (req) => {
   const token = req.headers.authorization.split(' ')[1];
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -32,7 +55,6 @@ router.use(express.urlencoded({ extended: true }));
 const postProjection = {
   _id: 0,
   postId: '$_id',
-  unlockedUsers: 0,
   title: 1,
   companyName: 1,
   feeling: 1,
@@ -306,6 +328,26 @@ router.get('/salary/:id', async (req, res) => {
 });
 
 router.post('/salary', jwtAuthMiddleware, async (req, res) => {
+  const { taxId, companyName } = req.body;
+  const existingCompany = await Company.findOne({ taxId });
+  if (!existingCompany) {
+    const company = new Company({
+      companyName,
+      taxId,
+      type: await getCompanyType(taxId),
+      address: await getCompanyAddress(taxId),
+      photo: 'https://true-salary-story.s3.amazonaws.com/logo.png', // TODO 依照公司相關取得 logo
+      phone: '0222345678', // TODO 看看有沒有其他方式可取得公司電話
+      shared: 1,
+      createUser: getUserIdFromJWT(req),
+      updateUser: getUserIdFromJWT(req),
+    });
+    await company.save();
+  } else {
+    existingCompany.shared += 1;
+    await existingCompany.save();
+  }
+
   const payload = {
     ...req.body,
     createUser: getUserIdFromJWT(req),
