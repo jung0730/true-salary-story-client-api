@@ -103,13 +103,11 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
 // Step 2: Send the order to LINE Pay
 router.post('/:transactionId', async (req, res, next) => {
   const { transactionId } = req.params;
-  console.log(1, transactionId);
 
   // Find the transaction by transactionId
   const transaction = await Transaction.findOne({
     transactionId: transactionId,
   });
-  console.log(2, transaction);
 
   if (!transaction) {
     return res.status(404).json({
