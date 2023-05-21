@@ -7,6 +7,7 @@ const connectDB = require('config/database');
 const errorHandler = require('middleware/errorHandler');
 const routes = require('routes');
 const passport = require('passport');
+const createPointsForExistingUsers = require('database/migrations');
 require('config/passport');
 
 // Initialize Express application
@@ -14,6 +15,9 @@ const app = express();
 
 // Connect to the database
 connectDB();
+
+// Run the migration
+createPointsForExistingUsers().catch(console.error);
 
 // Configure middleware
 app.use(cors());

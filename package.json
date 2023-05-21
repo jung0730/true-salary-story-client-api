@@ -9,7 +9,8 @@
     "config": "src/config",
     "models": "src/models",
     "routes": "src/routes",
-    "middleware": "src/middleware"
+    "middleware": "src/middleware",
+    "database": "src/database"
   },
   "scripts": {
     "dev": "nodemon src/app.js",
