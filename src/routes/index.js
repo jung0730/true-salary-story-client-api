@@ -8,6 +8,7 @@ const salaryRoutes = require('routes/salary');
 const accountRoutes = require('routes/account');
 const companyRoutes = require('routes/company');
 const linePayRoutes = require('routes/pay/linePay');
+const orderRoutes = require('routes/order');
 
 router.use('/auth', authRoutes);
 router.use('/social', socialRoutes);
@@ -16,5 +17,6 @@ router.use('/api', salaryRoutes);
 router.use('/api', accountRoutes);
 router.use('/api', companyRoutes);
 router.use('/linePay', linePayRoutes);
+router.use('/api', orderRoutes);
 
 module.exports = router;
