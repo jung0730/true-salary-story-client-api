@@ -3,6 +3,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const jwt = require('jsonwebtoken');
 const User = require('models/User');
+const Point = require('models/Point');
 
 passport.use(
   new GoogleStrategy(
@@ -21,6 +22,13 @@ passport.use(
             profilePicture: profile.photos[0].value,
             loginTimestamp: new Date(),
           });
+          // Also create an associated Point record for the new user.
+          const point = await Point.create({
+            user: user._id,
+          });
+          // Link the user to the Point record.
+          user.points = point;
+          await user.save();
         } else {
           // Update the login timestamp for the existing user.
           user.loginTimestamp = new Date();

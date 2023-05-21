@@ -16,7 +16,9 @@ true-salary-story-client-api/
 │ │ ├── jwtAuthMiddleware.js
 │ ├── models/
 │ │ ├── Company.js
+│ │ ├── Keyword.js
 │ │ ├── Point.js
+│ │ ├── Post.js
 │ │ ├── Salary.js
 │ │ ├── Transaction.js
 │ │ ├── User.js

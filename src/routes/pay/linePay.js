@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { createLinePayBody, createSignature } = require('config/pay/linePay');
 const User = require('models/User');
 const Point = require('models/Point');
@@ -167,10 +168,18 @@ router.post('/:transactionId', async (req, res, next) => {
   }
 });
 
+const updateTransaction = async (transaction, status, remark) => {
+  transaction.status = status;
+  transaction.transactionRemark = remark;
+  await transaction.save();
+};
+
 // Step 3: Confirm the payment
 router.get('/confirm', async (req, res) => {
-  const { transactionId, orderId } = req.query;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
+  const { transactionId, orderId } = req.query;
   const transaction = await Transaction.findOne({
     transactionId: orderId,
   });
@@ -190,27 +199,44 @@ router.get('/confirm', async (req, res) => {
     const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
     const linePayRes = await axios.post(url, linePayBody, { headers });
 
-    // 請求成功
+    // If linePay request is successful
     if (linePayRes?.data?.returnCode === '0000') {
       // Update transaction status to success
       transaction.status = 'success';
+      transaction.transactionRemark = linePayRes.data.returnMessage;
+      await transaction.save();
+
+      // Find user
+      const user = await User.findById(transaction.user).session(session);
+
+      // Find user's point
+      const point = await Point.findById(user.points).session(session);
+
+      // Update user's points
+      point.point += transaction.points;
+      await point.save({ session });
+
+      // Commit the transaction and end the session
+      await session.commitTransaction();
+      session.endSession();
+
+      // Redirect the user
       res.redirect(`${FRONTEND_URL}/user/credit-history`);
     } else {
-      // Update transaction status to failure and store the failure message
-      transaction.status = 'failure';
-      res.status(400).send({
-        message: linePayRes,
-      });
+      await updateTransaction(
+        transaction,
+        'failure',
+        linePayRes.data.returnMessage,
+      );
+      await session.abortTransaction();
+      return res.status(400).send({ message: linePayRes });
     }
-
-    transaction.transactionRemark = linePayRes.data.returnMessage;
-    await transaction.save();
   } catch (error) {
-    transaction.status = 'failed';
-    transaction.transactionRemark = 'Error while processing the transaction';
-    await transaction.save();
+    await updateTransaction(transaction, 'failed', error);
+    await session.endSession();
     res.end();
   }
+  session.endSession();
 });
 
 module.exports = router;
