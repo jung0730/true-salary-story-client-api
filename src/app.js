@@ -18,6 +18,7 @@ connectDB();
 // Configure middleware
 app.use(cors());
 app.use(passport.initialize());
+app.use(express.json());
 
 // Set up routes
 app.use('/', routes);

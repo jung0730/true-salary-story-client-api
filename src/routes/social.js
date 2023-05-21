@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const passport = require('passport');
-const frontendURL = process.env.FRONTEND_DEV_URL || 'http://localhost:3001';
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 router.get(
   '/google',
@@ -19,7 +19,7 @@ router.get('/google/callback', (req, res, next) => {
       return next({ message: 'Authentication failed', statusCode: 401 });
     }
 
-    res.redirect(`${frontendURL}/login?token=${user.token}`);
+    res.redirect(`${FRONTEND_URL}/login?token=${user.token}`);
   })(req, res, next);
 });
 
