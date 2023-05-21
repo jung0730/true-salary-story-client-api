@@ -123,6 +123,15 @@ router.delete(
         return res.status(400).json({ message: '查無此公司' });
       }
 
+      const isExistSubscribing = await User.findById(userId).countDocuments({
+        subscribing: {
+          $elemMatch: { company: companyId },
+        },
+      });
+      if (!isExistSubscribing) {
+        return res.status(400).json({ message: '未訂閱此公司，不可取消訂閱' });
+      }
+
       await User.updateOne(
         {
           _id: userId,
