@@ -229,8 +229,7 @@ router.get('/salary/search', async (req, res) => {
 
       for (const company of companyResultsByType) {
         const postCount = await Post.countDocuments({
-          company: company._id,
-          status: 'approved',
+          company: company.name,
         }).exec();
         results.typeResults.push({
           companyName: company.companyName,
@@ -238,7 +237,7 @@ router.get('/salary/search', async (req, res) => {
           type: company.type,
           address: company.address,
           phone: company.phone,
-          postCount: postCount.toString(),
+          postCount,
         });
       }
 
