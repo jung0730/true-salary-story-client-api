@@ -198,7 +198,10 @@ router.get('/salary/search', async (req, res) => {
       const regex = new RegExp(companyName, 'i');
       const companyResultsByCompanyName = await Company.find({
         companyName: { $regex: regex },
-      }).exec();
+      })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec();
       results.companyResults = [];
 
       for (const company of companyResultsByCompanyName) {
@@ -224,7 +227,10 @@ router.get('/salary/search', async (req, res) => {
       const regex = new RegExp(type, 'i');
       const companyResultsByType = await Company.find({
         type: { $regex: regex },
-      }).exec();
+      })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec();
       results.typeResults = [];
 
       for (const company of companyResultsByType) {
