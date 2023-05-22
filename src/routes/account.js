@@ -8,7 +8,7 @@ const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const Post = require('models/Post');
 const User = require('models/User');
 const Company = require('models/Company');
-const Order = require('models/Order');
+const Transaction = require('models/Transaction');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -205,18 +205,18 @@ router.get('/account/order/list', jwtAuthMiddleware, async (req, res) => {
   const { limit: perPage } = req.query;
 
   try {
-    const findRule = { createUser: id };
+    const findRule = { user: id };
 
     if (!page) {
       page = 1;
     }
 
-    const data = await Order.find(findRule)
+    const data = await Transaction.find(findRule)
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .select('orderId orderName paymentMethod createDate price');
+      .select('orderDetails status');
 
-    const totalCount = await Order.countDocuments(findRule);
+    const totalCount = await Transaction.countDocuments(findRule);
 
     res.json({
       message: '成功',
