@@ -9,34 +9,60 @@ const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { LINEPAY_VERSION, LINEPAY_SITE, FRONTEND_URL } = process.env;
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
 
-const date = new Date();
-date.setHours(date.getHours() + 8);
-const isoTime = date.toISOString();
-const orderTime = isoTime.slice(0, -1) + isoTime.slice(-3);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
-const ORDER_DETAILS = {
-  amount: 0,
-  currency: 'TWD',
-  orderId: `${orderTime}_${uuidv4()}`,
-  packages: [
+// check transaction time is expired or not
+const updateExpiredTransactions = async (userId) => {
+  const now = new Date();
+
+  await Transaction.updateMany(
     {
-      id: uuidv4(),
-      amount: 0,
-      products: [
-        {
-          name: '',
-          quantity: 0,
-          price: 0,
-        },
-      ],
+      user: userId,
+      status: 'pending',
+      expiryTime: { $lt: now },
     },
-  ],
+    {
+      $set: { status: 'expired' },
+    },
+  );
 };
 
 // Step 1: Create an order
 router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
   const { purchaseType, amount } = req.body;
+
+  const localTimeString = dayjs()
+    .tz('Asia/Taipei')
+    .format('YYYY-MM-DDTHH:mm:ss.SSS');
+
+  const ORDER_DETAILS = {
+    amount: 0,
+    currency: 'TWD',
+    orderId: `${localTimeString}_${uuidv4()}`,
+    packages: [
+      {
+        id: uuidv4(),
+        amount: 0,
+        products: [
+          {
+            name: '',
+            quantity: 0,
+            price: 0,
+          },
+        ],
+      },
+    ],
+  };
+
+  // Update expired transactions
+  await updateExpiredTransactions(req.user.id);
 
   // Check if the required parameters are provided
   if (!purchaseType || !amount) {
