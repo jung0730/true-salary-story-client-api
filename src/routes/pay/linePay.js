@@ -12,11 +12,9 @@ const { LINEPAY_VERSION, LINEPAY_SITE, FRONTEND_URL } = process.env;
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const customParseFormat = require('dayjs/plugin/customParseFormat');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-dayjs.extend(customParseFormat);
 
 // check transaction time is expired or not
 const updateExpiredTransactions = async (userId) => {
@@ -38,14 +36,12 @@ const updateExpiredTransactions = async (userId) => {
 router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
   const { purchaseType, amount } = req.body;
 
-  const localTimeString = dayjs()
-    .tz('Asia/Taipei')
-    .format('YYYY-MM-DDTHH:mm:ss.SSS');
+  const orderTimeString = dayjs().utc().format('YYYY-MM-DDTHH:mm:ss.SSS');
 
   const ORDER_DETAILS = {
     amount: 0,
     currency: 'TWD',
-    orderId: `${localTimeString}_${uuidv4()}`,
+    orderId: `${orderTimeString}_${uuidv4()}`,
     packages: [
       {
         id: uuidv4(),
