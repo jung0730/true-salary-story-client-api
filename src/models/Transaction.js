@@ -22,6 +22,15 @@ const TransactionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  purchaseTime: {
+    type: Date,
+    default: () => {
+      let now = new Date(); // Get current UTC date
+      let offsetHours = 8; // Get Taipei offset from UTC
+      let purchaseTime = new Date(now.setHours(now.getHours() + offsetHours));
+      return purchaseTime;
+    },
+  },
   status: {
     type: String,
     enum: ['pending', 'success', 'failure', 'expired', 'cancelled'],
