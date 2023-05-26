@@ -5,9 +5,8 @@ const Company = require('models/Company');
 const Keyword = require('models/Keyword');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
-
-const jwt = require('jsonwebtoken');
 
 const getCompanyAddress = async (taxId) => {
   const companyAddress = await axios
@@ -32,12 +31,6 @@ const getCompanyType = async (taxId) => {
   return companyType;
 };
 
-const getUserIdFromJWT = (req) => {
-  const token = req.headers.authorization.split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  return decoded.id;
-};
-
 const formatDate = (date) => {
   return new Date(date).toISOString().substring(0, 10);
 };
@@ -46,8 +39,6 @@ const findCompanyTypeByTaxId = async (taxId) => {
   const company = await Company.findOne({ taxId });
   return company ? company.type : null;
 };
-
-const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -59,9 +50,9 @@ const postProjection = {
   overtime: 1,
 };
 
-router.post('/salary/:id/permission', async (req, res) => {
+router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   const postId = req.params.id;
-  const userId = getUserIdFromJWT(req);
+  const userId = req.user.id;
 
   try {
     const post = await Post.findById(postId);
@@ -84,7 +75,7 @@ router.post('/salary/:id/permission', async (req, res) => {
   }
 });
 
-router.get('/salary/uniformNumbers/:number', (req, res) => {
+router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
   const apiUrl = `https://data.gcis.nat.gov.tw/od/data/api/9D17AE0D-09B5-4732-A8F4-81ADED04B679?$format=JSON&$filter=Business_Accounting_NO eq ${number}`;
 
@@ -324,6 +315,7 @@ router.get('/salary/:id', async (req, res) => {
 
 router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const { taxId, companyName } = req.body;
+  const userId = req.user.id;
   const existingCompany = await Company.findOne({ taxId });
   if (!existingCompany) {
     const company = new Company({
@@ -334,8 +326,8 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
       photo: 'https://true-salary-story.s3.amazonaws.com/logo.png', // TODO 依照公司相關取得 logo
       phone: '0222345678', // TODO 看看有沒有其他方式可取得公司電話
       shared: 1,
-      createUser: getUserIdFromJWT(req),
-      updateUser: getUserIdFromJWT(req),
+      createUser: userId,
+      updateUser: userId,
     });
     await company.save();
   } else {
@@ -345,7 +337,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
 
   const payload = {
     ...req.body,
-    createUser: getUserIdFromJWT(req),
+    createUser: userId,
   };
 
   const post = new Post(payload);
