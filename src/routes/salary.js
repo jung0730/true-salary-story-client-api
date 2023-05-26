@@ -263,6 +263,37 @@ router.get('/salary/search', async (req, res) => {
   }
 });
 
+router.get('/salary/getTopCompanyType', async (req, res) => {
+  try {
+    const topCompanyTypes = await Company.aggregate([
+      { $match: { type: { $ne: '' } } },
+      {
+        $group: {
+          _id: '$type',
+          type: { $first: '$type' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 20 },
+      {
+        $project: {
+          _id: 0,
+          type: 1,
+          count: 1,
+        },
+      },
+    ]);
+
+    res.json({ message: 'success', companyTypes: topCompanyTypes });
+  } catch (error) {
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error.message,
+    });
+  }
+});
+
 router.get('/salary/getTopCompany', async (req, res) => {
   try {
     const topCompanies = await Post.aggregate([
