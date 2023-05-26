@@ -121,8 +121,7 @@ router.get('/salary/getTopKeyword', async (req, res) => {
     const keywords = await Keyword.find({})
       .sort({ rank: 1 })
       .limit(25)
-      .select('keyword -_id')
-      .exec();
+      .select('keyword -_id');
 
     const keywordList = keywords.map((keyword) => keyword.keyword);
 
@@ -142,13 +141,11 @@ router.get('/salary/getTopPost', async (req, res) => {
   try {
     const latestPost = await Post.find({}, postProjection)
       .sort({ createDate: -1 })
-      .limit(15)
-      .exec();
+      .limit(15);
 
     const popularPost = await Post.find({}, postProjection)
       .sort({ seen: -1 })
-      .limit(15)
-      .exec();
+      .limit(15);
 
     res.json({ message: '成功', latestPost, popularPost });
   } catch (error) {
@@ -180,8 +177,7 @@ router.get('/salary/search', async (req, res) => {
       const regex = new RegExp(title, 'i');
       const titleResults = await Post.find({ title: { $regex: regex } })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.titleResults = titleResults.map((post) => ({
         postId: post._id,
         title: post.title,
@@ -193,22 +189,20 @@ router.get('/salary/search', async (req, res) => {
 
       options.titleResultsCount = await Post.countDocuments({
         title: { $regex: regex },
-      }).exec();
+      });
     } else if (companyName) {
       const regex = new RegExp(companyName, 'i');
       const companyResultsByCompanyName = await Company.find({
         companyName: { $regex: regex },
       })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.companyResults = [];
 
       for (const company of companyResultsByCompanyName) {
         const latestPosts = await Post.find({ company: company.name })
           .sort({ createDate: -1 })
-          .limit(3)
-          .exec();
+          .limit(3);
         const latestPostTitles = latestPosts.map((post) => post.title);
 
         results.companyResults.push({
@@ -229,14 +223,13 @@ router.get('/salary/search', async (req, res) => {
         type: { $regex: regex },
       })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.typeResults = [];
 
       for (const company of companyResultsByType) {
         const postCount = await Post.countDocuments({
           company: company.name,
-        }).exec();
+        });
         results.typeResults.push({
           companyName: company.companyName,
           taxId: company.taxId,
