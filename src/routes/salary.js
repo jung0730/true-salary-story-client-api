@@ -5,9 +5,8 @@ const Company = require('models/Company');
 const Keyword = require('models/Keyword');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const isValidObjectId = mongoose.Types.ObjectId.isValid;
-
-const jwt = require('jsonwebtoken');
 
 const getCompanyAddress = async (taxId) => {
   const companyAddress = await axios
@@ -32,12 +31,6 @@ const getCompanyType = async (taxId) => {
   return companyType;
 };
 
-const getUserIdFromJWT = (req) => {
-  const token = req.headers.authorization.split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  return decoded.id;
-};
-
 const formatDate = (date) => {
   return new Date(date).toISOString().substring(0, 10);
 };
@@ -46,8 +39,6 @@ const findCompanyTypeByTaxId = async (taxId) => {
   const company = await Company.findOne({ taxId });
   return company ? company.type : null;
 };
-
-const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -59,9 +50,9 @@ const postProjection = {
   overtime: 1,
 };
 
-router.post('/salary/:id/permission', async (req, res) => {
+router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   const postId = req.params.id;
-  const userId = getUserIdFromJWT(req);
+  const userId = req.user.id;
 
   try {
     const post = await Post.findById(postId);
@@ -76,7 +67,7 @@ router.post('/salary/:id/permission', async (req, res) => {
     post.unlockedUsers.push(userId);
     await post.save();
 
-    return res.status(200).json({ message: '成功' });
+    return res.status(200).json({ message: 'success' });
   } catch (error) {
     return res
       .status(500)
@@ -84,7 +75,7 @@ router.post('/salary/:id/permission', async (req, res) => {
   }
 });
 
-router.get('/salary/uniformNumbers/:number', (req, res) => {
+router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
   const apiUrl = `https://data.gcis.nat.gov.tw/od/data/api/9D17AE0D-09B5-4732-A8F4-81ADED04B679?$format=JSON&$filter=Business_Accounting_NO eq ${number}`;
 
@@ -95,13 +86,13 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
       if (data.length > 0) {
         const companyName = data[0].Company_Name;
         res.json({
-          message: '成功',
+          message: 'success',
           isExist: true,
           companyName: companyName,
         });
       } else {
         res.json({
-          message: '成功',
+          message: 'success',
           isExist: false,
           companyName: '',
         });
@@ -121,13 +112,12 @@ router.get('/salary/getTopKeyword', async (req, res) => {
     const keywords = await Keyword.find({})
       .sort({ rank: 1 })
       .limit(25)
-      .select('keyword -_id')
-      .exec();
+      .select('keyword -_id');
 
     const keywordList = keywords.map((keyword) => keyword.keyword);
 
     res.json({
-      message: '成功',
+      message: 'success',
       keywords: keywordList,
     });
   } catch (error) {
@@ -142,15 +132,13 @@ router.get('/salary/getTopPost', async (req, res) => {
   try {
     const latestPost = await Post.find({}, postProjection)
       .sort({ createDate: -1 })
-      .limit(15)
-      .exec();
+      .limit(15);
 
     const popularPost = await Post.find({}, postProjection)
       .sort({ seen: -1 })
-      .limit(15)
-      .exec();
+      .limit(15);
 
-    res.json({ message: '成功', latestPost, popularPost });
+    res.json({ message: 'success', latestPost, popularPost });
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
@@ -180,8 +168,7 @@ router.get('/salary/search', async (req, res) => {
       const regex = new RegExp(title, 'i');
       const titleResults = await Post.find({ title: { $regex: regex } })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.titleResults = titleResults.map((post) => ({
         postId: post._id,
         title: post.title,
@@ -193,22 +180,20 @@ router.get('/salary/search', async (req, res) => {
 
       options.titleResultsCount = await Post.countDocuments({
         title: { $regex: regex },
-      }).exec();
+      });
     } else if (companyName) {
       const regex = new RegExp(companyName, 'i');
       const companyResultsByCompanyName = await Company.find({
         companyName: { $regex: regex },
       })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.companyResults = [];
 
       for (const company of companyResultsByCompanyName) {
         const latestPosts = await Post.find({ company: company.name })
           .sort({ createDate: -1 })
-          .limit(3)
-          .exec();
+          .limit(3);
         const latestPostTitles = latestPosts.map((post) => post.title);
 
         results.companyResults.push({
@@ -229,14 +214,13 @@ router.get('/salary/search', async (req, res) => {
         type: { $regex: regex },
       })
         .skip((page - 1) * limit)
-        .limit(limit)
-        .exec();
+        .limit(limit);
       results.typeResults = [];
 
       for (const company of companyResultsByType) {
         const postCount = await Post.countDocuments({
           company: company.name,
-        }).exec();
+        });
         results.typeResults.push({
           companyName: company.companyName,
           taxId: company.taxId,
@@ -251,7 +235,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     res.json({
-      message: '成功',
+      message: 'success',
       ...results,
       ...options,
     });
@@ -317,7 +301,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
       },
     ]);
 
-    res.json({ message: '成功', companies: topCompanies });
+    res.json({ message: 'success', companies: topCompanies });
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
@@ -346,7 +330,7 @@ router.get('/salary/:id', async (req, res) => {
     await post.save();
 
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: {
         companyType: await findCompanyTypeByTaxId(post.taxId),
         ...post.toJSON(),
@@ -362,6 +346,7 @@ router.get('/salary/:id', async (req, res) => {
 
 router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const { taxId, companyName } = req.body;
+  const userId = req.user.id;
   const existingCompany = await Company.findOne({ taxId });
   if (!existingCompany) {
     const company = new Company({
@@ -372,8 +357,8 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
       photo: 'https://true-salary-story.s3.amazonaws.com/logo.png', // TODO 依照公司相關取得 logo
       phone: '0222345678', // TODO 看看有沒有其他方式可取得公司電話
       shared: 1,
-      createUser: getUserIdFromJWT(req),
-      updateUser: getUserIdFromJWT(req),
+      createUser: userId,
+      updateUser: userId,
     });
     await company.save();
   } else {
@@ -383,7 +368,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
 
   const payload = {
     ...req.body,
-    createUser: getUserIdFromJWT(req),
+    createUser: userId,
   };
 
   const post = new Post(payload);
@@ -391,7 +376,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   try {
     const result = await post.save();
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: [
         {
           title: result.title,

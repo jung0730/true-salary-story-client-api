@@ -45,7 +45,7 @@ router.get(
       const totalCount = await Post.countDocuments(findRule);
 
       res.json({
-        message: '成功',
+        message: 'success',
         result: data,
         totalCount,
       });
@@ -67,7 +67,7 @@ router.post(
         return res.status(400).json({ message: 'Id格式錯誤' });
       }
 
-      const isExist = await Company.findById(companyId).exec();
+      const isExist = await Company.findById(companyId);
       if (!isExist) {
         return res.status(400).json({ message: '查無此公司' });
       }
@@ -118,7 +118,7 @@ router.delete(
         return res.status(400).json({ message: 'Id格式錯誤' });
       }
 
-      const isExist = await Company.findById(companyId).exec();
+      const isExist = await Company.findById(companyId);
       if (!isExist) {
         return res.status(400).json({ message: '查無此公司' });
       }
@@ -219,7 +219,7 @@ router.get('/account/order/list', jwtAuthMiddleware, async (req, res) => {
     const totalCount = await Transaction.countDocuments(findRule);
 
     res.json({
-      message: '成功',
+      message: 'success',
       result: data,
       totalCount,
     });
