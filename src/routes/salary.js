@@ -76,7 +76,7 @@ router.post('/salary/:id/permission', async (req, res) => {
     post.unlockedUsers.push(userId);
     await post.save();
 
-    return res.status(200).json({ message: '成功' });
+    return res.status(200).json({ message: 'success' });
   } catch (error) {
     return res
       .status(500)
@@ -95,13 +95,13 @@ router.get('/salary/uniformNumbers/:number', (req, res) => {
       if (data.length > 0) {
         const companyName = data[0].Company_Name;
         res.json({
-          message: '成功',
+          message: 'success',
           isExist: true,
           companyName: companyName,
         });
       } else {
         res.json({
-          message: '成功',
+          message: 'success',
           isExist: false,
           companyName: '',
         });
@@ -126,7 +126,7 @@ router.get('/salary/getTopKeyword', async (req, res) => {
     const keywordList = keywords.map((keyword) => keyword.keyword);
 
     res.json({
-      message: '成功',
+      message: 'success',
       keywords: keywordList,
     });
   } catch (error) {
@@ -147,7 +147,7 @@ router.get('/salary/getTopPost', async (req, res) => {
       .sort({ seen: -1 })
       .limit(15);
 
-    res.json({ message: '成功', latestPost, popularPost });
+    res.json({ message: 'success', latestPost, popularPost });
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
@@ -244,7 +244,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     res.json({
-      message: '成功',
+      message: 'success',
       ...results,
       ...options,
     });
@@ -279,7 +279,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
       },
     ]);
 
-    res.json({ message: '成功', companies: topCompanies });
+    res.json({ message: 'success', companies: topCompanies });
   } catch (error) {
     res.status(500).json({
       message: '伺服器錯誤',
@@ -308,7 +308,7 @@ router.get('/salary/:id', async (req, res) => {
     await post.save();
 
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: {
         companyType: await findCompanyTypeByTaxId(post.taxId),
         ...post.toJSON(),
@@ -353,7 +353,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   try {
     const result = await post.save();
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: [
         {
           title: result.title,

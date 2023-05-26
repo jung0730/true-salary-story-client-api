@@ -21,7 +21,7 @@ router.post('/company', jwtAuthMiddleware, async (req, res) => {
   try {
     const result = await company.save();
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: [
         {
           taxId: result.taxId,

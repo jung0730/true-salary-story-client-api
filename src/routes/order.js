@@ -23,7 +23,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res) => {
     const result = await order.save();
 
     return res.status(200).json({
-      message: '成功',
+      message: 'success',
       result: [
         {
           orderName: result.orderName,

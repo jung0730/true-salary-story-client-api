@@ -45,7 +45,7 @@ router.get(
       const totalCount = await Post.countDocuments(findRule);
 
       res.json({
-        message: '成功',
+        message: 'success',
         result: data,
         totalCount,
       });
@@ -219,7 +219,7 @@ router.get('/account/order/list', jwtAuthMiddleware, async (req, res) => {
     const totalCount = await Transaction.countDocuments(findRule);
 
     res.json({
-      message: '成功',
+      message: 'success',
       result: data,
       totalCount,
     });
