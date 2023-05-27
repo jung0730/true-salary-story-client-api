@@ -129,15 +129,20 @@ const postSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    unlockedUsers: {
-      type: [
-        {
-          type: mongoose.Schema.ObjectId,
+    unlockedUsers: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
           ref: 'User',
+          required: true,
         },
-      ],
-      default: [],
-    },
+        createdAt: {
+          type: Date,
+          required: true,
+          default: Date.now,
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected', 'removed'],
