@@ -99,6 +99,55 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
+router.post('/salary/company/:taxId', jwtAuthMiddleware, async (req, res) => {
+  const taxId = req.params.taxId;
+  const { sort, order, limit, page } = req.query;
+
+  const sortOptions = {};
+  if (
+    sort &&
+    ['createDate', 'yearlySalary', 'workYears', 'feeling'].includes(sort)
+  ) {
+    sortOptions[sort] = order === 'desc' ? -1 : 1;
+  }
+
+  try {
+    const posts = await Post.find({ taxId })
+      .sort(sortOptions)
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .lean();
+
+    if (!posts) {
+      return res.status(404).json({
+        message: '找不到該公司的薪水資訊',
+        result: [],
+      });
+    }
+
+    const userId = req.user && req.user.id;
+    for (const post of posts) {
+      const isLocked =
+        !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
+      post.isLocked = isLocked;
+      if (isLocked) {
+        post.jobDescription = post.jobDescription.substring(0, 10);
+        post.suggestion = post.suggestion.substring(0, 10);
+      }
+    }
+
+    res.status(200).json({
+      message: 'success',
+      result: posts,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: '伺服器錯誤',
+      result: error.message,
+    });
+  }
+});
+
 router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
   const apiUrl = `https://data.gcis.nat.gov.tw/od/data/api/9D17AE0D-09B5-4732-A8F4-81ADED04B679?$format=JSON&$filter=Business_Accounting_NO eq ${number}`;
@@ -336,7 +385,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
 
 router.get('/salary/:id', jwtAuthMiddleware, async (req, res) => {
   const postId = req.params.id;
-  const userId = req.user && req.user.id; // 使用者 ID，若存在則表示有通過驗證
+  const userId = req.user && req.user.id;
 
   try {
     const post = await Post.findById(postId);
@@ -352,7 +401,6 @@ router.get('/salary/:id', jwtAuthMiddleware, async (req, res) => {
       !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
 
     if (isLocked) {
-      // 使用者不在 unlockedUsers 清單中，回傳部分欄位內容
       const partialPost = {
         jobDescription: post.jobDescription.substring(0, 10),
         suggestion: post.suggestion.substring(0, 10),
@@ -369,13 +417,6 @@ router.get('/salary/:id', jwtAuthMiddleware, async (req, res) => {
         avgHoursPerDay: post.avgHoursPerDay,
         companyType: await findCompanyTypeByTaxId(post.taxId),
       };
-
-      // 將其餘欄位設為 null
-      for (const key in partialPost) {
-        if (partialPost[key] === undefined) {
-          partialPost[key] = null;
-        }
-      }
 
       return res.status(200).json({
         message: 'success',
