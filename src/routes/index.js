@@ -9,6 +9,7 @@ const accountRoutes = require('routes/account');
 const companyRoutes = require('routes/company');
 const linePayRoutes = require('routes/pay/linePay');
 const orderRoutes = require('routes/order');
+const publicRoutes = require('routes/public');
 
 router.use('/auth', authRoutes);
 router.use('/social', socialRoutes);
@@ -18,5 +19,6 @@ router.use('/api', accountRoutes);
 router.use('/api', companyRoutes);
 router.use('/linePay', linePayRoutes);
 router.use('/api', orderRoutes);
+router.use('/api/public', publicRoutes);
 
 module.exports = router;
