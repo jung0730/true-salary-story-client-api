@@ -6,6 +6,7 @@ const Keyword = require('models/Keyword');
 const Point = require('models/Point');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
 
 const getCompanyAddress = async (taxId) => {
   const companyAddress = await axios
@@ -99,54 +100,59 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
-router.post('/salary/company/:taxId', jwtAuthMiddleware, async (req, res) => {
-  const taxId = req.params.taxId;
-  const { sort, order, limit, page } = req.query;
+router.post(
+  '/salary/company/:taxId',
+  partialPostInfosMiddleware,
+  async (req, res) => {
+    const taxId = req.params.taxId;
+    const { sort, order, limit, page } = req.query;
 
-  const sortOptions = {};
-  if (
-    sort &&
-    ['createDate', 'yearlySalary', 'workYears', 'feeling'].includes(sort)
-  ) {
-    sortOptions[sort] = order === 'desc' ? -1 : 1;
-  }
+    const sortOptions = {};
+    if (
+      sort &&
+      ['createDate', 'yearlySalary', 'workYears', 'feeling'].includes(sort)
+    ) {
+      sortOptions[sort] = order === 'desc' ? -1 : 1;
+    }
 
-  try {
-    const posts = await Post.find({ taxId })
-      .sort(sortOptions)
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .limit(parseInt(limit))
-      .lean();
+    try {
+      const posts = await Post.find({ taxId })
+        .sort(sortOptions)
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit))
+        .lean();
 
-    if (!posts) {
-      return res.status(404).json({
-        message: '找不到該公司的薪水資訊',
-        result: [],
+      if (!posts) {
+        return res.status(404).json({
+          message: '找不到該公司的薪水資訊',
+          result: [],
+        });
+      }
+
+      const userId = req.user && req.user.id;
+      for (const post of posts) {
+        const isLocked =
+          !userId ||
+          !post.unlockedUsers.some((user) => user.user.equals(userId));
+        post.isLocked = isLocked;
+        if (isLocked) {
+          post.jobDescription = post.jobDescription.substring(0, 10);
+          post.suggestion = post.suggestion.substring(0, 10);
+        }
+      }
+
+      res.status(200).json({
+        message: 'success',
+        result: posts,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: '伺服器錯誤',
+        result: error.message,
       });
     }
-
-    const userId = req.user && req.user.id;
-    for (const post of posts) {
-      const isLocked =
-        !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
-      post.isLocked = isLocked;
-      if (isLocked) {
-        post.jobDescription = post.jobDescription.substring(0, 10);
-        post.suggestion = post.suggestion.substring(0, 10);
-      }
-    }
-
-    res.status(200).json({
-      message: 'success',
-      result: posts,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: '伺服器錯誤',
-      result: error.message,
-    });
-  }
-});
+  },
+);
 
 router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
@@ -383,7 +389,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
   }
 });
 
-router.get('/salary/:id', jwtAuthMiddleware, async (req, res) => {
+router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
   const postId = req.params.id;
   const userId = req.user && req.user.id;
 
