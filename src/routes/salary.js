@@ -40,6 +40,20 @@ const findCompanyTypeByTaxId = async (taxId) => {
   return company ? company.type : null;
 };
 
+const getMostFrequentValue = (obj) => {
+  let mostFrequentValue = '';
+  let maxCount = 0;
+
+  for (const key in obj) {
+    if (obj[key] > maxCount) {
+      mostFrequentValue = key;
+      maxCount = obj[key];
+    }
+  }
+
+  return mostFrequentValue;
+};
+
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
@@ -49,6 +63,58 @@ const postProjection = {
   feeling: 1,
   overtime: 1,
 };
+
+router.get('/salary/company/:taxId/infos', async (req, res) => {
+  const taxId = req.params.taxId;
+
+  try {
+    const posts = await Post.find({ taxId });
+
+    const postCount = posts.length;
+
+    let feelingStats = {};
+    let overtimeStats = {};
+    let totalMonthlySalary = 0;
+
+    posts.forEach((post) => {
+      const { feeling, overtime, monthlySalary } = post;
+
+      if (feelingStats[feeling]) {
+        feelingStats[feeling] += 1;
+      } else {
+        feelingStats[feeling] = 1;
+      }
+
+      if (overtimeStats[overtime]) {
+        overtimeStats[overtime] += 1;
+      } else {
+        overtimeStats[overtime] = 1;
+      }
+
+      totalMonthlySalary += monthlySalary;
+    });
+
+    const avgMonthlySalary =
+      postCount > 0 ? Math.round(totalMonthlySalary / postCount) : 0;
+
+    const result = {
+      feeling: getMostFrequentValue(feelingStats),
+      overtime: getMostFrequentValue(overtimeStats),
+      avgMonthlySalary,
+      postCount,
+    };
+
+    res.status(200).json({
+      message: 'success',
+      result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: '伺服器錯誤',
+      result: error.message,
+    });
+  }
+});
 
 router.get('/salary/company/:taxId/title', async (req, res) => {
   const taxId = req.params.taxId;
