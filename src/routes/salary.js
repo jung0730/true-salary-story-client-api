@@ -358,13 +358,13 @@ router.get('/salary/search', async (req, res) => {
   const { companyName, type, title, keyword, limit, page } = req.query;
   const perPage = parseInt(limit) || 10;
   const currentPage = parseInt(page) || 1;
-  const regex = new RegExp(companyName, 'i');
 
   const options = {};
   const results = {};
 
   try {
     if (title) {
+      const regex = new RegExp(title, 'i');
       const titleResults = await Post.find({
         title: { $regex: regex },
         status: 'approved',
@@ -388,6 +388,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     if (companyName) {
+      const regex = new RegExp(companyName, 'i');
       const posts = await Post.find({
         companyName: { $regex: regex },
         status: 'approved',
@@ -433,6 +434,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     if (type) {
+      const regex = new RegExp(type, 'i');
       const companyResultsByType = await Company.find({
         type: { $regex: regex },
       })
@@ -460,6 +462,9 @@ router.get('/salary/search', async (req, res) => {
       options.typeResultsCount = await Company.countDocuments({
         type: { $regex: regex },
       });
+    }
+
+    if (keyword) {
     }
 
     res.json({
