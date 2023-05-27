@@ -50,6 +50,37 @@ const postProjection = {
   overtime: 1,
 };
 
+router.get('/salary/company/:taxId/title', async (req, res) => {
+  const taxId = req.params.taxId;
+
+  try {
+    const posts = await Post.aggregate([
+      { $match: { taxId, status: 'approved' } },
+      { $group: { _id: '$title', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({
+        message: '找不到該公司的職位資訊',
+        result: [],
+      });
+    }
+
+    const titles = posts.map((post) => post._id);
+
+    res.status(200).json({
+      message: 'success',
+      result: titles,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Server error',
+      result: error.message,
+    });
+  }
+});
+
 router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   const postId = req.params.id;
   const userId = req.user.id;
@@ -57,7 +88,9 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(postId);
     if (!post) {
-      return res.status(404).json({ message: '找不到指定的薪資資訊' });
+      return res
+        .status(404)
+        .json({ message: '伺服器錯誤找不到指定的薪資資訊' });
     }
 
     if (post.unlockedUsers.includes(userId)) {
@@ -71,7 +104,7 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   } catch (error) {
     return res
       .status(500)
-      .json({ message: '伺服器錯誤', result: error.message });
+      .json({ message: 'Server error', result: error.message });
   }
 });
 
@@ -101,7 +134,7 @@ router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
     .catch((error) => {
       console.error(error);
       res.status(500).json({
-        message: '伺服器錯誤',
+        message: 'Server error',
         result: error.message,
       });
     });
@@ -122,7 +155,7 @@ router.get('/salary/getTopKeyword', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -141,7 +174,7 @@ router.get('/salary/getTopPost', async (req, res) => {
     res.json({ message: 'success', latestPost, popularPost });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -241,7 +274,7 @@ router.get('/salary/search', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -272,7 +305,7 @@ router.get('/salary/getTopCompanyType', async (req, res) => {
     res.json({ message: 'success', companyTypes: topCompanyTypes });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -304,7 +337,7 @@ router.get('/salary/getTopCompany', async (req, res) => {
     res.json({ message: 'success', companies: topCompanies });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -338,7 +371,7 @@ router.get('/salary/:id', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -393,7 +426,7 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
         .json({ message: '失敗', result: errors.join(', ') });
     }
     return res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
