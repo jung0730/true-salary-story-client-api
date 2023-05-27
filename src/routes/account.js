@@ -25,7 +25,7 @@ router.get(
 
     try {
       const q = !!keyword ? { companyName: new RegExp(keyword) } : {};
-      const findRule = { createUser: id, ...q };
+      const findRule = { createUser: id, ...q, status: 'approved' };
 
       if (!page) {
         page = 1;
@@ -39,7 +39,7 @@ router.get(
         .skip((page - 1) * perPage)
         .limit(perPage)
         .select(
-          'title companyName city employmentType monthlySalary createDate seen',
+          'title companyName city employmentType monthlySalary yearlySalary dailySalary hourlySalary createDate seen',
         );
 
       const totalCount = await Post.countDocuments(findRule);
