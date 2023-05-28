@@ -9,9 +9,32 @@ const Post = require('models/Post');
 const User = require('models/User');
 const Company = require('models/Company');
 const Transaction = require('models/Transaction');
+const PointHistory = require('models/PointHistory');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
+
+router.get('/account/point/list', jwtAuthMiddleware, async (req, res) => {
+  const { id } = req.user;
+  const { page, limit } = req.query;
+
+  try {
+    const data = await PointHistory.find({ user: id })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+    res.status(200).json({
+      message: 'success',
+      result: data,
+      totalCount: data.count,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Server error',
+      result: error.message,
+    });
+  }
+});
 
 router.get(
   '/account/salary/shared/list',
