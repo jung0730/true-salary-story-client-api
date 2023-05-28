@@ -246,114 +246,6 @@ router.get('/salary/getTopPost', async (req, res) => {
   }
 });
 
-// router.get('/salary/search', async (req, res) => {
-//   const { companyName, type, title, page, limit } = req.query;
-
-//   if (
-//     (companyName && (type || title)) ||
-//     (type && (companyName || title)) ||
-//     (title && (companyName || type))
-//   ) {
-//     return res.status(400).json({
-//       message: '只能傳入一個參數 (companyName, type 或 title)',
-//     });
-//   }
-
-//   const options = {};
-//   const results = {};
-
-//   try {
-//     if (title) {
-//       const regex = new RegExp(title, 'i');
-//       const titleResults = await Post.find({
-//         title: { $regex: regex },
-//         status: 'approved',
-//       })
-//         .skip((page - 1) * limit)
-//         .limit(limit);
-//       results.titleResults = titleResults.map((post) => ({
-//         postId: post._id,
-//         title: post.title,
-//         companyName: post.companyName,
-//         createDate: formatDate(post.createDate),
-//         jobDescription: post.jobDescription.substring(0, 10),
-//         suggestion: post.suggestion.substring(0, 10),
-//       }));
-
-//       options.titleResultsCount = await Post.countDocuments({
-//         title: { $regex: regex },
-//         status: 'approved',
-//       });
-//     } else if (companyName) {
-//       const regex = new RegExp(companyName, 'i');
-//       const companyResultsByCompanyName = await Company.find({
-//         companyName: { $regex: regex },
-//       })
-//         .skip((page - 1) * limit)
-//         .limit(limit);
-//       results.companyResults = [];
-
-//       for (const company of companyResultsByCompanyName) {
-//         const latestPosts = await Post.find({
-//           company: company.name,
-//           status: 'approved',
-//         })
-//           .sort({ createDate: -1 })
-//           .limit(3);
-//         const latestPostTitles = latestPosts.map((post) => post.title);
-
-//         results.companyResults.push({
-//           companyName: company.companyName,
-//           taxId: company.taxId,
-//           latestPostCreateDate:
-//             latestPosts.length > 0
-//               ? formatDate(latestPosts[0].createDate)
-//               : null,
-//           latestPostTitle: latestPostTitles,
-//         });
-//       }
-
-//       options.companyResultsCount = companyResultsByCompanyName.length;
-//     } else if (type) {
-//       const regex = new RegExp(type, 'i');
-//       const companyResultsByType = await Company.find({
-//         type: { $regex: regex },
-//       })
-//         .skip((page - 1) * limit)
-//         .limit(limit);
-//       results.typeResults = [];
-
-//       for (const company of companyResultsByType) {
-//         const postCount = await Post.countDocuments({
-//           company: company.name,
-//           status: 'approved',
-//         });
-//         results.typeResults.push({
-//           companyName: company.companyName,
-//           taxId: company.taxId,
-//           type: company.type,
-//           address: company.address,
-//           phone: company.phone,
-//           postCount,
-//         });
-//       }
-
-//       options.typeResultsCount = companyResultsByType.length;
-//     }
-
-//     res.json({
-//       message: 'success',
-//       ...results,
-//       ...options,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       message: 'Server error',
-//       result: error.message,
-//     });
-//   }
-// });
-
 router.get('/salary/search', async (req, res) => {
   const { companyName, type, title, keyword, limit, page } = req.query;
   const perPage = parseInt(limit) || 10;
@@ -429,7 +321,7 @@ router.get('/salary/search', async (req, res) => {
         };
       });
 
-      results.titleResults = formattedResults;
+      results.companyResults = formattedResults;
       options.companyResultsCount = companyResults.length;
     }
 
