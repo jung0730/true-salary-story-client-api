@@ -243,7 +243,7 @@ router.get('/confirm', async (req, res) => {
       session.endSession();
 
       // Redirect the user
-      res.redirect(`${FRONTEND_URL}/user/credit-history`);
+      res.redirect(`${FRONTEND_URL}/user/orders`);
     } else {
       await updateTransaction(
         transaction,
