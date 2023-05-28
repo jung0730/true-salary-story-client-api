@@ -39,7 +39,7 @@ router.get(
         .skip((page - 1) * perPage)
         .limit(perPage)
         .select(
-          'title companyName city employmentType monthlySalary yearlySalary dailySalary hourlySalary createDate seen',
+          'title companyName city employmentType monthlySalary yearlySalary dailySalary hourlySalary createDate seen taxId',
         );
 
       const totalCount = await Post.countDocuments(findRule);
@@ -177,7 +177,7 @@ router.get(
           path: 'subscribing',
           populate: {
             path: 'company',
-            select: 'companyName photo address shared',
+            select: 'companyName photo address shared taxId',
           },
         })
         .skip((page - 1) * perPage)
