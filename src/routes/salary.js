@@ -27,7 +27,11 @@ const getCompanyType = async (taxId) => {
     )
     .then((response) => {
       const data = response.data;
-      return data[0].Cmp_Business[0].Business_Item_Desc;
+      const rowCompanyType = data[0].Cmp_Business[0].Business_Item_Desc;
+      const formatCompanyType = (rowCompanyType) => {
+        return rowCompanyType.replace(/[^\u4e00-\u9fa5a-zA-Z]/g, '');
+      };
+      return formatCompanyType(rowCompanyType);
     });
   return companyType;
 };
