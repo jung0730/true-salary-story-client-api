@@ -4,6 +4,7 @@ const Post = require('models/Post');
 const Company = require('models/Company');
 const Keyword = require('models/Keyword');
 const Point = require('models/Point');
+const PointHistory = require('models/PointHistory');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
@@ -111,7 +112,7 @@ router.get('/salary/company/:taxId/infos', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: '伺服器錯誤',
+      message: 'Server error',
       result: error.message,
     });
   }
@@ -156,9 +157,7 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
     const post = await Post.findById(postId).populate('unlockedUsers');
 
     if (!post) {
-      return res
-        .status(404)
-        .json({ message: '伺服器錯誤找不到指定的薪資資訊' });
+      return res.status(404).json({ message: '找不到指定的薪資資訊' });
     }
 
     const userPoints = await Point.findOne({ user: userId });
@@ -178,21 +177,22 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
     post.unlockedUsers.push({ user: userId, createdAt: new Date() });
     await post.save();
 
-    // TODO: 待討論積分紀錄實作方式，目前先用扣除的方式處理
     userPoints.point -= 100;
     await userPoints.save();
 
-    // const pointRecord = new Point({
-    //   user: userId,
-    //   point: -100, // TODO: 可設定成 config
-    //   remark: `兑換薪水情報：${post.companyName}`,
-    //   startDate: new Date(),
-    //   endDate: null, // TODO: 確認兑換薪水情報是否有期限
-    //   createdAt: new Date(),
-    // });
-    // await pointRecord.save();
+    const pointHistory = new PointHistory({
+      user: userId,
+      point: -100, // TODO: 可設定成 config
+      remark: `兑換薪水情報：${post.companyName} - ${post.title}`,
+      startDate: new Date(),
+      endDate: null,
+    });
+    await pointHistory.save();
 
-    return res.status(200).json({ message: 'success' });
+    return res.status(200).json({
+      message: 'success',
+      result: { isLocked: false, postId },
+    });
   } catch (error) {
     return res
       .status(500)
@@ -262,7 +262,7 @@ router.get(
       });
     } catch (error) {
       return res.status(500).json({
-        message: '伺服器錯誤',
+        message: 'Server error',
         result: error.message,
       });
     }
@@ -622,7 +622,24 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const post = new Post(payload);
 
   try {
+    const userPoints = await Point.findOne({ user: userId });
     const result = await post.save();
+
+    userPoints.point += 200; // TODO 可設定成 config
+    await userPoints.save();
+
+    const currentDate = new Date();
+    const endDate = new Date(currentDate.getTime());
+    endDate.setFullYear(endDate.getFullYear() + 1);
+
+    const pointHistory = new PointHistory({
+      user: userId,
+      point: 200,
+      remark: `分享薪水情報：${post.companyName} - ${post.title}`,
+      startDate: currentDate,
+      endDate,
+    });
+    await pointHistory.save();
     return res.status(200).json({
       message: 'success',
       result: [
