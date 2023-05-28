@@ -306,7 +306,7 @@ router.get('/salary/search', async (req, res) => {
       }
 
       const companyResults = await Company.find({
-        companyName: { $in: companyNames },
+        companyName: { $regex: regex },
       });
 
       const formattedResults = companyResults.map((company) => {
