@@ -200,29 +200,44 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
-router.post(
+router.get(
   '/salary/company/:taxId',
   partialPostInfosMiddleware,
   async (req, res) => {
     const taxId = req.params.taxId;
-    const { sort, order, limit, page } = req.query;
+    const { titleOption, sortOption, limit, page } = req.query;
 
-    const sortOptions = {};
-    if (
-      sort &&
-      ['createDate', 'yearlySalary', 'workYears', 'feeling'].includes(sort)
-    ) {
-      sortOptions[sort] = order === 'desc' ? -1 : 1;
+    let sortOptions = {};
+    if (sortOption) {
+      switch (sortOption) {
+        case '1':
+          sortOptions = { createDate: -1 };
+          break;
+        case '2':
+          sortOptions = { yearlySalary: -1 };
+          break;
+        case '3':
+          sortOptions = { workYears: -1 };
+          break;
+        case '4':
+          sortOptions = { feelings: 1 };
+          break;
+      }
     }
 
     try {
-      const posts = await Post.find({ taxId })
+      const query = { taxId };
+      if (titleOption && titleOption !== '全部') {
+        const titles = titleOption.split(',');
+        query.title = { $in: titles.map((title) => new RegExp(title, 'i')) };
+      }
+
+      const posts = await Post.find(query)
         .sort(sortOptions)
         .skip((parseInt(page) - 1) * parseInt(limit))
-        .limit(parseInt(limit))
-        .lean();
+        .limit(parseInt(limit));
 
-      if (!posts) {
+      if (!posts || posts.length === 0) {
         return res.status(404).json({
           message: '找不到該公司的薪水資訊',
           result: [],
@@ -230,20 +245,20 @@ router.post(
       }
 
       const userId = req.user && req.user.id;
-      for (const post of posts) {
+      const result = posts.map((post) => {
         const isLocked =
           !userId ||
           !post.unlockedUsers.some((user) => user.user.equals(userId));
-        post.isLocked = isLocked;
         if (isLocked) {
           post.jobDescription = post.jobDescription.substring(0, 10);
           post.suggestion = post.suggestion.substring(0, 10);
         }
-      }
+        return { ...post.toJSON(), isLocked };
+      });
 
       res.status(200).json({
         message: 'success',
-        result: posts,
+        result,
       });
     } catch (error) {
       return res.status(500).json({
@@ -549,14 +564,12 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
         createDate: post.createDate,
         avgHoursPerDay: post.avgHoursPerDay,
         companyType: await findCompanyTypeByTaxId(post.taxId),
+        isLocked: true,
       };
 
       return res.status(200).json({
         message: 'success',
-        result: {
-          isLocked: true,
-          post: partialPost,
-        },
+        result: partialPost,
       });
     }
 
@@ -567,10 +580,8 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
       message: 'success',
       result: {
         isLocked: false,
-        post: {
-          companyType: await findCompanyTypeByTaxId(post.taxId),
-          ...post.toJSON(),
-        },
+        companyType: await findCompanyTypeByTaxId(post.taxId),
+        ...post.toJSON(),
       },
     });
   } catch (error) {
