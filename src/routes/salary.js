@@ -3,10 +3,10 @@ const router = express.Router();
 const Post = require('models/Post');
 const Company = require('models/Company');
 const Keyword = require('models/Keyword');
-const mongoose = require('mongoose');
+const Point = require('models/Point');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
-const isValidObjectId = mongoose.Types.ObjectId.isValid;
+const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
 
 const getCompanyAddress = async (taxId) => {
   const companyAddress = await axios
@@ -153,19 +153,44 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate('unlockedUsers');
+
     if (!post) {
       return res
         .status(404)
         .json({ message: '伺服器錯誤找不到指定的薪資資訊' });
     }
 
-    if (post.unlockedUsers.includes(userId)) {
+    const userPoints = await Point.findOne({ user: userId });
+
+    if (!userPoints || userPoints.point < 100) {
+      return res.status(400).json({ message: '積分不足' });
+    }
+
+    const isUserUnlocked = post.unlockedUsers.some(
+      (user) => user.user.toString() === userId,
+    );
+
+    if (isUserUnlocked) {
       return res.status(400).json({ message: '使用者已擁有權限' });
     }
 
-    post.unlockedUsers.push(userId);
+    post.unlockedUsers.push({ user: userId, createdAt: new Date() });
     await post.save();
+
+    // TODO: 待討論積分紀錄實作方式，目前先用扣除的方式處理
+    userPoints.point -= 100;
+    await userPoints.save();
+
+    // const pointRecord = new Point({
+    //   user: userId,
+    //   point: -100, // TODO: 可設定成 config
+    //   remark: `兑換薪水情報：${post.companyName}`,
+    //   startDate: new Date(),
+    //   endDate: null, // TODO: 確認兑換薪水情報是否有期限
+    //   createdAt: new Date(),
+    // });
+    // await pointRecord.save();
 
     return res.status(200).json({ message: 'success' });
   } catch (error) {
@@ -174,6 +199,75 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
       .json({ message: 'Server error', result: error.message });
   }
 });
+
+router.get(
+  '/salary/company/:taxId',
+  partialPostInfosMiddleware,
+  async (req, res) => {
+    const taxId = req.params.taxId;
+    const { titleOption, sortOption, limit, page } = req.query;
+
+    let sortOptions = {};
+    if (sortOption) {
+      switch (sortOption) {
+        case '1':
+          sortOptions = { createDate: -1 };
+          break;
+        case '2':
+          sortOptions = { yearlySalary: -1 };
+          break;
+        case '3':
+          sortOptions = { workYears: -1 };
+          break;
+        case '4':
+          sortOptions = { feelings: 1 };
+          break;
+      }
+    }
+
+    try {
+      const query = { taxId };
+      if (titleOption && titleOption !== '全部') {
+        const titles = titleOption.split(',');
+        query.title = { $in: titles.map((title) => new RegExp(title, 'i')) };
+      }
+
+      const posts = await Post.find(query)
+        .sort(sortOptions)
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit));
+
+      if (!posts || posts.length === 0) {
+        return res.status(404).json({
+          message: '找不到該公司的薪水資訊',
+          result: [],
+        });
+      }
+
+      const userId = req.user && req.user.id;
+      const result = posts.map((post) => {
+        const isLocked =
+          !userId ||
+          !post.unlockedUsers.some((user) => user.user.equals(userId));
+        if (isLocked) {
+          post.jobDescription = post.jobDescription.substring(0, 10);
+          post.suggestion = post.suggestion.substring(0, 10);
+        }
+        return { ...post.toJSON(), isLocked };
+      });
+
+      res.status(200).json({
+        message: 'success',
+        result,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: '伺服器錯誤',
+        result: error.message,
+      });
+    }
+  },
+);
 
 router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
@@ -437,19 +531,45 @@ router.get('/salary/getTopCompany', async (req, res) => {
   }
 });
 
-router.get('/salary/:id', async (req, res) => {
-  const id = req.params.id;
-
-  if (!isValidObjectId(id)) {
-    return res.status(400).json({ message: 'id 格式錯誤或沒有這筆薪資資訊' });
-  }
+router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
+  const postId = req.params.id;
+  const userId = req.user && req.user.id;
 
   try {
-    const post = await Post.findById(id);
+    const post = await Post.findById(postId);
+
     if (!post) {
       return res.status(404).json({
         message: 'id 格式錯誤或沒有這筆薪資資訊',
         result: [],
+      });
+    }
+
+    const isLocked =
+      !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
+
+    if (isLocked) {
+      const partialPost = {
+        jobDescription: post.jobDescription.substring(0, 10),
+        suggestion: post.suggestion.substring(0, 10),
+        overtime: post.overtime,
+        feeling: post.feeling,
+        companyName: post.companyName,
+        title: post.title,
+        city: post.city,
+        workYears: post.workYears,
+        totalWorkYears: post.totalWorkYears,
+        tags: post.tags,
+        customTags: post.customTags,
+        createDate: post.createDate,
+        avgHoursPerDay: post.avgHoursPerDay,
+        companyType: await findCompanyTypeByTaxId(post.taxId),
+        isLocked: true,
+      };
+
+      return res.status(200).json({
+        message: 'success',
+        result: partialPost,
       });
     }
 
@@ -459,6 +579,7 @@ router.get('/salary/:id', async (req, res) => {
     return res.status(200).json({
       message: 'success',
       result: {
+        isLocked: false,
         companyType: await findCompanyTypeByTaxId(post.taxId),
         ...post.toJSON(),
       },
