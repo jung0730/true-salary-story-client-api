@@ -285,10 +285,7 @@ router.get('/salary/search', async (req, res) => {
       const posts = await Post.find({
         companyName: { $regex: regex },
         status: 'approved',
-      })
-        .sort({ createDate: -1 })
-        .skip((currentPage - 1) * perPage)
-        .limit(perPage);
+      });
 
       const groupedPosts = {};
       const companyNames = [];
@@ -322,7 +319,11 @@ router.get('/salary/search', async (req, res) => {
         };
       });
 
-      results.companyResults = formattedResults;
+      const startIndex = (currentPage - 1) * perPage;
+      const endIndex = startIndex + perPage;
+      const pagedResults = formattedResults.slice(startIndex, endIndex);
+
+      results.companyResults = pagedResults;
       options.companyResultsCount = companyResults.length;
     }
 
