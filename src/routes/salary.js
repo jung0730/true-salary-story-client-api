@@ -98,6 +98,7 @@ router.get('/salary/company/:taxId/infos', async (req, res) => {
       postCount > 0 ? Math.round(totalMonthlySalary / postCount) : 0;
 
     const result = {
+      companyName: posts.length ? posts[0].companyName : '',
       feeling: getMostFrequentValue(feelingStats),
       overtime: getMostFrequentValue(overtimeStats),
       avgMonthlySalary,
