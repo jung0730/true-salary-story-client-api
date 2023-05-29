@@ -346,7 +346,7 @@ router.get('/salary/getTopPost', async (req, res) => {
 });
 
 router.get('/salary/search', async (req, res) => {
-  const { companyName, type, title, keyword, limit, page } = req.query;
+  const { companyName, type, title, limit, page } = req.query;
   const perPage = parseInt(limit) || 10;
   const currentPage = parseInt(page) || 1;
 
@@ -454,9 +454,6 @@ router.get('/salary/search', async (req, res) => {
       options.typeResultsCount = await Company.countDocuments({
         type: { $regex: regex },
       });
-    }
-
-    if (keyword) {
     }
 
     res.json({
