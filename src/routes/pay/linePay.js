@@ -200,11 +200,18 @@ const updateTransaction = async (transaction, status, remark) => {
 const updatePointHistory = async (transaction, status, session = null) => {
   transaction.status = status;
 
+  let pointHistoryRemark;
+  if (transaction.amount === 699) {
+    pointHistoryRemark = '購買加薪計畫 699';
+  } else {
+    pointHistoryRemark = `購買 ${transaction.points} 積分`;
+  }
+
   if (status === 'success') {
     const pointHistory = new PointHistory({
       user: transaction.user,
       point: transaction.points,
-      remark: `Line Pay transaction succeeded`,
+      remark: pointHistoryRemark,
     });
     await pointHistory.save();
   }
