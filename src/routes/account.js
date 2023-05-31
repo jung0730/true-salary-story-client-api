@@ -79,6 +79,45 @@ router.get(
   },
 );
 
+router.get(
+  '/account/salary/unlocked/list',
+  jwtAuthMiddleware,
+  async (req, res) => {
+    const { id } = req.user;
+
+    const { keyword } = req.query;
+    let { page } = req.query;
+    const { limit: perPage } = req.query;
+
+    try {
+      const q = !!keyword ? { companyName: new RegExp(keyword) } : {};
+      const findRule = {
+        ...q,
+        unlockedUsers: { $elemMatch: { user: id } },
+      };
+
+      if (!page) {
+        page = 1;
+      }
+
+      const data = await Post.find(findRule)
+        .skip((page - 1) * perPage)
+        .limit(perPage)
+        .select('title companyName createDate taxId employmentType');
+
+      const totalCount = await Post.countDocuments(findRule);
+
+      res.json({
+        message: 'success',
+        result: data,
+        totalCount,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 router.post(
   '/account/salary/:id/subscribe',
   jwtAuthMiddleware,
