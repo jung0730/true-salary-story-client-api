@@ -17,7 +17,7 @@ const app = express();
 connectDB();
 
 // Run the migration
-createPointsForExistingUsers().catch(console.error);
+// createPointsForExistingUsers().catch(console.log('error'));
 
 // Configure middleware
 app.use(cors());

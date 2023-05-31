@@ -238,6 +238,15 @@ router.get('/confirm', async (req, res) => {
       point.point += transaction.points;
       await point.save({ session });
 
+      // Create a PointHistory record
+      const pointHistory = new PointHistory({
+        user: user._id,
+        point: transaction.points,
+        remark: 'Line Pay transaction succeeded',
+        startDate: Date.now(),
+      });
+      await pointHistory.save({ session });
+
       // Commit the transaction and end the session
       await session.commitTransaction();
       session.endSession();
