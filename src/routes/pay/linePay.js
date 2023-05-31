@@ -5,6 +5,7 @@ const { createLinePayBody, createSignature } = require('config/pay/linePay');
 const User = require('models/User');
 const Point = require('models/Point');
 const Transaction = require('models/Transaction');
+const PointHistory = require('models/PointHistory');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
@@ -63,7 +64,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
   // Check if the required parameters are provided
   if (!purchaseType || !amount) {
     return res.status(400).json({
-      status: 'failure',
+      status: 'failed',
       message: 'Both purchaseType and amount are required parameters',
     });
   }
@@ -77,7 +78,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
   if (purchaseType === 'subscription') {
     ORDER_DETAILS.packages[0].products[0].quantity = 1;
     ORDER_DETAILS.packages[0].products[0].price = amount;
-    ORDER_DETAILS.packages[0].products[0].name = '訂閱方案';
+    ORDER_DETAILS.packages[0].products[0].name = '加薪計畫';
     point = 2000;
   } else {
     ORDER_DETAILS.packages[0].products[0].quantity = amount / 150;
@@ -133,7 +134,7 @@ router.post('/:transactionId', async (req, res, next) => {
 
   if (!transaction) {
     return res.status(404).json({
-      status: 'failure',
+      status: 'failed',
       message: 'Transaction not found',
     });
   }
@@ -147,7 +148,7 @@ router.post('/:transactionId', async (req, res, next) => {
       await transaction.save();
 
       return res.status(400).json({
-        status: 'failure',
+        status: 'failed',
         message: 'Transaction has expired',
       });
     }
@@ -196,6 +197,19 @@ const updateTransaction = async (transaction, status, remark) => {
   await transaction.save();
 };
 
+const updatePointHistory = async (transaction, status, session = null) => {
+  transaction.status = status;
+
+  if (status === 'success') {
+    const pointHistory = new PointHistory({
+      user: transaction.user,
+      point: transaction.points,
+      remark: `Line Pay transaction succeeded`,
+    });
+    await pointHistory.save();
+  }
+};
+
 // Step 3: Confirm the payment
 router.get('/confirm', async (req, res) => {
   const session = await mongoose.startSession();
@@ -239,35 +253,28 @@ router.get('/confirm', async (req, res) => {
       await point.save({ session });
 
       // Create a PointHistory record
-      const pointHistory = new PointHistory({
-        user: user._id,
-        point: transaction.points,
-        remark: 'Line Pay transaction succeeded',
-        startDate: Date.now(),
-      });
-      await pointHistory.save({ session });
+      updatePointHistory(transaction, 'success', session);
 
       // Commit the transaction and end the session
       await session.commitTransaction();
-      session.endSession();
-
       // Redirect the user
       res.redirect(`${FRONTEND_URL}/user/orders`);
     } else {
       await updateTransaction(
         transaction,
-        'failure',
+        'failed',
         linePayRes.data.returnMessage,
       );
+      await updatePointHistory(transaction, 'failed');
       await session.abortTransaction();
       return res.status(400).send({ message: linePayRes });
     }
   } catch (error) {
     await updateTransaction(transaction, 'failed', error);
-    await session.endSession();
     res.end();
+  } finally {
+    session.endSession();
   }
-  session.endSession();
 });
 
 module.exports = router;
