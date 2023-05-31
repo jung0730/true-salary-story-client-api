@@ -33,7 +33,7 @@ const TransactionSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'success', 'failure', 'expired', 'cancelled'],
+    enum: ['pending', 'success', 'failed', 'expired', 'cancelled'],
     default: 'pending',
   },
   expiryTime: {

@@ -23,6 +23,7 @@ router.get('/account/point/list', jwtAuthMiddleware, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
+
     res.status(200).json({
       message: 'success',
       result: data,
