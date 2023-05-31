@@ -18,6 +18,7 @@ true-salary-story-client-api/
 │ │ ├── Company.js
 │ │ ├── Keyword.js
 │ │ ├── Point.js
+│ │ ├── PointHistory.js
 │ │ ├── Post.js
 │ │ ├── Salary.js
 │ │ ├── Transaction.js
@@ -30,6 +31,8 @@ true-salary-story-client-api/
 │ │ ├── company.js
 │ │ ├── index.js
 │ │ ├── order.js
+│ │ ├── point.js
+│ │ ├── public.js
 │ │ ├── salary.js
 │ │ ├── social.js
 │ │ ├── user.js
