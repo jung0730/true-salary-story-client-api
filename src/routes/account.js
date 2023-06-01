@@ -14,7 +14,7 @@ const PointHistory = require('models/PointHistory');
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-router.get('/account/point/list', jwtAuthMiddleware, async (req, res) => {
+router.get('/account/point/list', jwtAuthMiddleware, async (req, res, next) => {
   const { id } = req.user;
   const { page, limit } = req.query;
 
@@ -24,16 +24,15 @@ router.get('/account/point/list', jwtAuthMiddleware, async (req, res) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
+    const totalCount = await PointHistory.countDocuments({ user: id });
+
     res.status(200).json({
       message: 'success',
       result: data,
-      totalCount: data.count,
+      totalCount: totalCount,
     });
   } catch (error) {
-    res.status(500).json({
-      message: 'Server error',
-      result: error.message,
-    });
+    next(error);
   }
 });
 
