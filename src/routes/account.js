@@ -316,4 +316,26 @@ router.post('/account/consult', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
+router.get('/account/consult/list', jwtAuthMiddleware, async (req, res) => {
+  const { id } = req.user;
+
+  try {
+    const findRule = { $or: [{ sender: id }, { receiver: id }] };
+
+    const data = await Consult.find(findRule)
+      .populate({
+        path: 'activePost',
+        select: 'title companyName',
+      })
+      .select('sender receiver messages activePost updateDate');
+
+    return res.json({
+      message: 'success',
+      result: data,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
