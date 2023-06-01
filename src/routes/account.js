@@ -274,6 +274,7 @@ router.get('/account/order/list', jwtAuthMiddleware, async (req, res) => {
     }
 
     const data = await Transaction.find(findRule)
+      .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)
       .limit(perPage)
       .select('orderDetails status createdAt');
