@@ -10,6 +10,7 @@ const User = require('models/User');
 const Company = require('models/Company');
 const Transaction = require('models/Transaction');
 const PointHistory = require('models/PointHistory');
+const Consult = require('models/Consult');
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
@@ -288,6 +289,30 @@ router.get('/account/order/list', jwtAuthMiddleware, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/account/consult', jwtAuthMiddleware, async (req, res) => {
+  const { receiverId, postId } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const consult = new Consult({
+      sender: userId,
+      receiver: receiverId,
+      messages: [],
+      activePost: postId,
+    });
+
+    await consult.save();
+
+    return res.json({
+      message: 'success',
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: 'Server error', result: error.message });
   }
 });
 
