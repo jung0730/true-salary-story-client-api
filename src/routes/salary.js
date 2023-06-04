@@ -224,7 +224,7 @@ router.get(
           sortOptions = { workYears: -1 };
           break;
         case '4':
-          sortOptions = { feelings: 1 };
+          sortOptions = { feeling: 1 };
           break;
       }
     }
@@ -235,6 +235,7 @@ router.get(
         const titles = titleOption.split(',');
         query.title = { $in: titles.map((title) => new RegExp(title, 'i')) };
       }
+      query.status = 'approved';
 
       const posts = await Post.find(query)
         .sort(sortOptions)
@@ -263,6 +264,7 @@ router.get(
       res.status(200).json({
         message: 'success',
         result,
+        totalCount: await Post.countDocuments(query),
       });
     } catch (error) {
       return res.status(500).json({
