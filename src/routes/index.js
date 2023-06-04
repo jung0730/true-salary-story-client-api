@@ -14,7 +14,7 @@ const publicRoutes = require('routes/public');
 // 三方登入
 router.use('/social', socialRoutes);
 // 三方金流
-router.use('/api/linePay', linePayRoutes);
+router.use('/linePay', linePayRoutes);
 router.use('/api/auth', authRoutes);
 router.use('/api/user', userRoutes);
 router.use('/api', salaryRoutes);
