@@ -567,6 +567,7 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
         companyType: await findCompanyTypeByTaxId(post.taxId),
         isLocked: true,
         createUser: post.createUser,
+        postId,
       };
 
       return res.status(200).json({
