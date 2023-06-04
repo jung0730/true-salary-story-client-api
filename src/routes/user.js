@@ -2,7 +2,19 @@ const express = require('express');
 const router = express.Router();
 
 const User = require('models/User');
+const PointHistory = require('models/PointHistory');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+
+function hasUserCheckedInToday(user) {
+  // Get today's date and set hours, mins, secs and ms to 0
+  const today = new Date().setHours(0, 0, 0, 0);
+  // Get last check-in date from user, and set hours, mins, secs and ms to 0
+  // Use && to avoid error if lastCheckIn is null/undefined
+  const lastCheckIn =
+    user.points.lastCheckIn && user.points.lastCheckIn.setHours(0, 0, 0, 0);
+  // Compare if today and lastCheckIn are equal, indicating user checked in today
+  return lastCheckIn === today;
+}
 
 router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
   try {
@@ -17,10 +29,12 @@ router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
       });
     }
 
+    const hasCheckedInToday = hasUserCheckedInToday(user);
+
     res.status(200).json({
       status: 'success',
       message: 'User data retrieved successfully',
-      data: { user },
+      data: { user, hasCheckedInToday },
     });
   } catch (error) {
     next(error);
@@ -36,17 +50,42 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
     }
 
     // Check if the user has already checked in today
-    const today = new Date().setHours(0, 0, 0, 0);
-    const lastCheckIn =
-      user.points.lastCheckIn && user.points.lastCheckIn.setHours(0, 0, 0, 0);
-    if (lastCheckIn === today) {
+    if (hasUserCheckedInToday(user)) {
       return next({ message: 'Already checked in today', statusCode: 400 });
     }
 
-    // Increment the user's points and update the lastCheckIn date
-    user.points.point += 1;
+    // Increment the checkInStreak and award bonus points
+    user.points.checkInStreak += 1;
     user.points.lastCheckIn = new Date();
+    let remark = '每日簽到成功！';
+    let pointRemark = 10;
+    if (user.points.checkInStreak % 14 === 0) {
+      user.points.point += 100;
+      pointRemark = 100;
+      remark = '每日簽到成功，並獲得滿 14 天獎勵！';
+    } else if (user.points.checkInStreak % 7 === 0) {
+      user.points.point += 50;
+      pointRemark = 50;
+      remark = '每日簽到成功，並獲得滿 7 天獎勵！';
+    } else {
+      user.points.point += 10;
+    }
+
+    // Reset the checkInStreak after 14 days
+    if (user.points.checkInStreak >= 14) {
+      user.points.checkInStreak = 0;
+    }
+
     await user.points.save();
+
+    // Create a new PointHistory record
+    const pointHistory = new PointHistory({
+      user: req.user.id,
+      point: pointRemark,
+      remark: remark,
+      startDate: new Date(),
+    });
+    await pointHistory.save();
 
     res.status(200).json({
       status: 'success',
