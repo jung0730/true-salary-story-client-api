@@ -9,6 +9,7 @@ const routes = require('routes');
 const passport = require('passport');
 const createPointsForExistingUsers = require('database/migrations');
 require('config/passport');
+require('./websocket');
 
 // Initialize Express application
 const app = express();
