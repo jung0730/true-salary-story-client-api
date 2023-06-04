@@ -11,13 +11,15 @@ const linePayRoutes = require('routes/pay/linePay');
 const orderRoutes = require('routes/order');
 const publicRoutes = require('routes/public');
 
-router.use('/auth', authRoutes);
+// 三方登入
 router.use('/social', socialRoutes);
-router.use('/user', userRoutes);
+// 三方金流
+router.use('/api/linePay', linePayRoutes);
+router.use('/api/auth', authRoutes);
+router.use('/api/user', userRoutes);
 router.use('/api', salaryRoutes);
 router.use('/api', accountRoutes);
 router.use('/api', companyRoutes);
-router.use('/linePay', linePayRoutes);
 router.use('/api', orderRoutes);
 router.use('/api/public', publicRoutes);
 

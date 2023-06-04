@@ -13,6 +13,10 @@ const PointSchema = new mongoose.Schema({
   lastCheckIn: {
     type: Date,
   },
+  checkInStreak: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const Point = mongoose.model('Point', PointSchema);
