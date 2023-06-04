@@ -255,8 +255,8 @@ router.get(
           !userId ||
           !post.unlockedUsers.some((user) => user.user.equals(userId));
         if (isLocked) {
-          post.jobDescription = post.jobDescription.substring(0, 10);
-          post.suggestion = post.suggestion.substring(0, 10);
+          post.jobDescription = post.jobDescription.substring(0, 10) + '...';
+          post.suggestion = post.suggestion.substring(0, 10) + '...';
         }
         return { ...post.toJSON(), isLocked };
       });
@@ -553,8 +553,8 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
 
     if (isLocked) {
       const partialPost = {
-        jobDescription: post.jobDescription.substring(0, 10),
-        suggestion: post.suggestion.substring(0, 10),
+        jobDescription: post.jobDescription.substring(0, 10) + '...',
+        suggestion: post.suggestion.substring(0, 10) + '...',
         overtime: post.overtime,
         feeling: post.feeling,
         companyName: post.companyName,
