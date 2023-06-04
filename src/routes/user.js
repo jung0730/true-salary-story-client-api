@@ -16,6 +16,21 @@ function hasUserCheckedInToday(user) {
   return lastCheckIn === today;
 }
 
+function hasCheckedInYesterday(user) {
+  // Get yesterday's date and set hours, mins, secs and ms to 0
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(0, 0, 0, 0);
+
+  // Get last check-in date from user, and set hours, mins, secs and ms to 0
+  // Use && to avoid error if lastCheckIn is null/undefined
+  const lastCheckIn =
+    user.points.lastCheckIn && user.points.lastCheckIn.setHours(0, 0, 0, 0);
+
+  // Compare if yesterday and lastCheckIn are equal, indicating user checked in yesterday
+  return lastCheckIn === yesterday.getTime();
+}
+
 router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id)
@@ -54,6 +69,11 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
       return next({ message: 'Already checked in today', statusCode: 400 });
     }
 
+    // If user didn't check in yesterday, reset the streak
+    if (!hasCheckedInYesterday(user)) {
+      user.points.checkInStreak = 0;
+    }
+
     // Increment the checkInStreak and award bonus points
     user.points.checkInStreak += 1;
     user.points.lastCheckIn = new Date();
@@ -90,7 +110,7 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Check-in successful, points updated',
-      data: { point: user.points.point },
+      data: { checkInStreak: user.points.checkInStreak },
     });
   } catch (error) {
     next(error);
