@@ -338,4 +338,46 @@ router.get('/account/consult/list', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
+router.post(
+  '/account/consult/:id/message',
+  jwtAuthMiddleware,
+  async (req, res) => {
+    const { id } = req.user;
+    const { id: consultId } = req.params;
+    const { content } = req.body;
+
+    try {
+      if (!isValidObjectId(consultId)) {
+        return res.status(400).json({ message: 'Id格式錯誤' });
+      }
+
+      const isExist = await Consult.findById(consultId);
+      if (!isExist) {
+        return res.status(400).json({ message: '查無此請教紀錄' });
+      }
+
+      const payload = {
+        sender: id,
+        content,
+        createDate: Date.now(),
+      };
+
+      const data = await Consult.findByIdAndUpdate(
+        {
+          _id: consultId,
+        },
+        { $push: { messages: payload } },
+        { new: true },
+      );
+
+      return res.json({
+        message: 'success',
+        result: data.messages[data.messages.length - 1],
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 module.exports = router;

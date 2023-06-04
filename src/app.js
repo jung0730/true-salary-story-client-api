@@ -9,7 +9,7 @@ const routes = require('routes');
 const passport = require('passport');
 const createPointsForExistingUsers = require('database/migrations');
 require('config/passport');
-require('./websocket');
+const ws = require('./websocket');
 
 // Initialize Express application
 const app = express();
@@ -33,6 +33,8 @@ app.use(errorHandler);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+ws.init(server);

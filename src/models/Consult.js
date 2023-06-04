@@ -11,7 +11,7 @@ const ConsultSchema = new mongoose.Schema({
   },
   messages: [
     {
-      user: {
+      sender: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',
       },
