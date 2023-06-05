@@ -104,6 +104,7 @@ router.get('/salary/company/:taxId/infos', async (req, res) => {
 
     const result = {
       companyName: posts.length ? posts[0].companyName : '',
+      companyType: await findCompanyTypeByTaxId(taxId),
       feeling: getMostFrequentValue(feelingStats),
       overtime: getMostFrequentValue(overtimeStats),
       avgMonthlySalary,
