@@ -59,6 +59,16 @@ const getMostFrequentValue = (obj) => {
   return mostFrequentValue;
 };
 
+const getPostType = (post) => {
+  const { monthlySalary, hourlySalary, dailySalary } = post;
+
+  return (
+    (monthlySalary && 'monthly') ||
+    (dailySalary && 'daily') ||
+    (hourlySalary && 'hourly')
+  );
+};
+
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
@@ -259,7 +269,7 @@ router.get(
           post.jobDescription = post.jobDescription.substring(0, 10) + '...';
           post.suggestion = post.suggestion.substring(0, 10) + '...';
         }
-        return { ...post.toJSON(), isLocked };
+        return { ...post.toJSON(), isLocked, type: getPostType(post) };
       });
 
       res.status(200).json({
@@ -571,6 +581,7 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
         isLocked: true,
         createUser: post.createUser,
         postId,
+        type: getPostType(post),
       };
 
       return res.status(200).json({
@@ -587,6 +598,7 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
       result: {
         isLocked: false,
         companyType: await findCompanyTypeByTaxId(post.taxId),
+        type: getPostType(post),
         ...post.toJSON(),
       },
     });
