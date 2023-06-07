@@ -5,29 +5,37 @@ const User = require('models/User');
 const PointHistory = require('models/PointHistory');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 
+function getCurrentUtcDate() {
+  const nowTime = new Date();
+  return Date.UTC(
+    nowTime.getUTCFullYear(),
+    nowTime.getUTCMonth(),
+    nowTime.getUTCDate(),
+  );
+}
+
 function hasUserCheckedInToday(user) {
-  // Get today's date and set hours, mins, secs and ms to 0
-  const today = new Date().setHours(0, 0, 0, 0);
-  // Get last check-in date from user, and set hours, mins, secs and ms to 0
-  // Use && to avoid error if lastCheckIn is null/undefined
+  const today = getCurrentUtcDate();
   const lastCheckIn =
-    user.points.lastCheckIn && user.points.lastCheckIn.setHours(0, 0, 0, 0);
-  // Compare if today and lastCheckIn are equal, indicating user checked in today
+    user.points.lastCheckIn &&
+    Date.UTC(
+      user.points.lastCheckIn.getUTCFullYear(),
+      user.points.lastCheckIn.getUTCMonth(),
+      user.points.lastCheckIn.getUTCDate(),
+    );
   return lastCheckIn === today;
 }
 
 function hasCheckedInYesterday(user) {
-  // Get yesterday's date and set hours, mins, secs and ms to 0
-  const yesterday = new Date();
+  const yesterday = new Date(getCurrentUtcDate());
   yesterday.setDate(yesterday.getDate() - 1);
-  yesterday.setHours(0, 0, 0, 0);
-
-  // Get last check-in date from user, and set hours, mins, secs and ms to 0
-  // Use && to avoid error if lastCheckIn is null/undefined
   const lastCheckIn =
-    user.points.lastCheckIn && user.points.lastCheckIn.setHours(0, 0, 0, 0);
-
-  // Compare if yesterday and lastCheckIn are equal, indicating user checked in yesterday
+    user.points.lastCheckIn &&
+    Date.UTC(
+      user.points.lastCheckIn.getUTCFullYear(),
+      user.points.lastCheckIn.getUTCMonth(),
+      user.points.lastCheckIn.getUTCDate(),
+    );
   return lastCheckIn === yesterday.getTime();
 }
 
@@ -76,7 +84,7 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
 
     // Increment the checkInStreak and award bonus points
     user.points.checkInStreak += 1;
-    user.points.lastCheckIn = new Date();
+    user.points.lastCheckIn = new Date(getCurrentUtcDate());
     let remark = '每日簽到成功！';
     let pointRemark = 10;
     if (user.points.checkInStreak % 14 === 0) {
@@ -93,7 +101,7 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
 
     // Reset the checkInStreak after 14 days
     if (user.points.checkInStreak >= 14) {
-      user.points.checkInStreak = 0;
+      user.points.checkInStreak = 1;
     }
 
     await user.points.save();
