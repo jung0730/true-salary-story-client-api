@@ -100,7 +100,7 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
     }
 
     // Reset the checkInStreak after 14 days
-    if (user.points.checkInStreak >= 14) {
+    if (user.points.checkInStreak > 14) {
       user.points.checkInStreak = 1;
     }
 
@@ -111,7 +111,6 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
       user: req.user.id,
       point: pointRemark,
       remark: remark,
-      startDate: new Date(),
     });
     await pointHistory.save();
 
