@@ -46,6 +46,10 @@ const UserSchema = new mongoose.Schema({
       },
     },
   ],
+  emailVerificationCode: {
+    code: String,
+    expiryDate: Date,
+  },
 });
 
 const User = mongoose.model('User', UserSchema);
