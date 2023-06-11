@@ -1,12 +1,21 @@
+// External dependencies, sorted alphabetically
+const CryptoJS = require('crypto-js');
 const express = require('express');
+const validator = require('validator');
+
+// Internal modules, sorted alphabetically
 const router = express.Router();
 
-const User = require('models/User');
-const PointHistory = require('models/PointHistory');
+// Local files, sorted alphabetically
+const {
+  CHECK_IN_BONUS_DAYS,
+  BONUS_POINTS,
+  REGULAR_POINTS,
+} = require('constants');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const PointHistory = require('models/PointHistory');
 const smtpTransport = require('config/mailer');
-const CryptoJS = require('crypto-js');
-const validator = require('validator');
+const User = require('models/User');
 
 function getCurrentUtcDate() {
   const nowTime = new Date();
@@ -99,17 +108,13 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
     user.points.checkInStreak += 1;
     user.points.lastCheckIn = new Date(getCurrentUtcDate());
     let remark = '每日簽到成功！';
-    let pointRemark = 10;
-    if (user.points.checkInStreak % 14 === 0) {
-      user.points.point += 100;
-      pointRemark = 100;
-      remark = '每日簽到成功，並獲得滿 14 天獎勵！';
-    } else if (user.points.checkInStreak % 7 === 0) {
-      user.points.point += 50;
-      pointRemark = 50;
-      remark = '每日簽到成功，並獲得滿 7 天獎勵！';
+    let pointRemark = REGULAR_POINTS;
+    if (CHECK_IN_BONUS_DAYS.includes(user.points.checkInStreak)) {
+      user.points.point += BONUS_POINTS[user.points.checkInStreak];
+      pointRemark = BONUS_POINTS[user.points.checkInStreak];
+      remark = `每日簽到成功，並獲得滿 ${user.points.checkInStreak} 天獎勵！`;
     } else {
-      user.points.point += 10;
+      user.points.point += REGULAR_POINTS;
     }
 
     // Reset the checkInStreak after 14 days
