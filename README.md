@@ -12,6 +12,8 @@ true-salary-story-client-api/
 │ │ ├── index.js
 │ │ ├── mailer.js
 │ │ ├── passport.js
+│ ├── constants/
+│ │ ├── index.js
 │ ├── middleware/
 │ │ ├── errorHandler.js
 │ │ ├── jwtAuthMiddleware.js

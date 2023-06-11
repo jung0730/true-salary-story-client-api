@@ -1,12 +1,21 @@
+// External dependencies, sorted alphabetically
+const CryptoJS = require('crypto-js');
 const express = require('express');
+const validator = require('validator');
+
+// Internal modules, sorted alphabetically
 const router = express.Router();
 
-const User = require('models/User');
-const PointHistory = require('models/PointHistory');
+// Local files, sorted alphabetically
+const {
+  CHECK_IN_BONUS_DAYS,
+  BONUS_POINTS,
+  REGULAR_POINTS,
+} = require('constants');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const PointHistory = require('models/PointHistory');
 const smtpTransport = require('config/mailer');
-const CryptoJS = require('crypto-js');
-const validator = require('validator');
+const User = require('models/User');
 
 function getCurrentUtcDate() {
   const nowTime = new Date();
@@ -52,19 +61,24 @@ function generateVerificationCode(length) {
   return verificationCode;
 }
 
-router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
+function getUser(req, res, next) {
+  let query = User.findById(req.user.id);
+  if (req.route.path === '/profile') {
+    query = query.select('displayName email profilePicture').populate('points');
+  } else if (req.route.path === '/checkIn') {
+    query = query.populate('points');
+  }
+  query.exec((err, user) => {
+    if (err || !user)
+      return next({ statusCode: 404, message: 'User not found' });
+    req.user = user;
+    next();
+  });
+}
+
+router.get('/profile', jwtAuthMiddleware, getUser, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id)
-      .select('displayName email profilePicture')
-      .populate('points');
-
-    if (!user) {
-      return next({
-        statusCode: 404,
-        message: 'User not found',
-      });
-    }
-
+    const { user } = req;
     const hasCheckedInToday = hasUserCheckedInToday(user);
 
     res.status(200).json({
@@ -77,14 +91,9 @@ router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
   }
 });
 
-router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
+router.post('/checkIn', jwtAuthMiddleware, getUser, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).populate('points');
-
-    if (!user) {
-      return next({ message: 'User not found', statusCode: 404 });
-    }
-
+    const { user } = req;
     // Check if the user has already checked in today
     if (hasUserCheckedInToday(user)) {
       return next({ message: 'Already checked in today', statusCode: 400 });
@@ -99,17 +108,13 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
     user.points.checkInStreak += 1;
     user.points.lastCheckIn = new Date(getCurrentUtcDate());
     let remark = '每日簽到成功！';
-    let pointRemark = 10;
-    if (user.points.checkInStreak % 14 === 0) {
-      user.points.point += 100;
-      pointRemark = 100;
-      remark = '每日簽到成功，並獲得滿 14 天獎勵！';
-    } else if (user.points.checkInStreak % 7 === 0) {
-      user.points.point += 50;
-      pointRemark = 50;
-      remark = '每日簽到成功，並獲得滿 7 天獎勵！';
+    let pointRemark = REGULAR_POINTS;
+    if (CHECK_IN_BONUS_DAYS.includes(user.points.checkInStreak)) {
+      user.points.point += BONUS_POINTS[user.points.checkInStreak];
+      pointRemark = BONUS_POINTS[user.points.checkInStreak];
+      remark = `每日簽到成功，並獲得滿 ${user.points.checkInStreak} 天獎勵！`;
     } else {
-      user.points.point += 10;
+      user.points.point += REGULAR_POINTS;
     }
 
     // Reset the checkInStreak after 14 days
@@ -207,69 +212,68 @@ router.post(
 );
 
 // Update User Email
-router.post('/updateEmail', jwtAuthMiddleware, async (req, res, next) => {
-  try {
-    const { verificationCode, newEmail } = req.body;
+router.post(
+  '/updateEmail',
+  jwtAuthMiddleware,
+  getUser,
+  async (req, res, next) => {
+    try {
+      const { user } = req;
+      const { verificationCode, newEmail } = req.body;
 
-    // Validate the verification code
-    if (!verificationCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Verification code is required',
+      // Validate the verification code
+      if (!verificationCode) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Verification code is required',
+        });
+      }
+
+      // Check if the verification code is correct
+      if (user.emailVerificationCode.code !== verificationCode) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid verification code',
+        });
+      }
+
+      // Check if the verification code has expired
+      if (user.emailVerificationCode.expiryDate <= Date.now()) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Verification code has expired',
+        });
+      }
+
+      // validate the new email
+      if (!validator.isEmail(newEmail)) {
+        return next({
+          statusCode: 400,
+          message: 'Invalid email address',
+        });
+      }
+
+      // validate the new email is already use or not
+      const existingUser = await User.findOne({ email: newEmail });
+      if (existingUser) {
+        return next({
+          statusCode: 400,
+          message: 'Email address already in use',
+        });
+      }
+
+      user.email = newEmail;
+      user.emailVerificationCode = {}; // Remove the verification code
+      await user.save();
+
+      res.json({
+        status: 'success',
+        message: 'Email updated successfully',
       });
+    } catch (error) {
+      next(error);
     }
-
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found',
-      });
-    }
-
-    if (user.emailVerificationCode.code !== verificationCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid verification code',
-      });
-    }
-
-    if (user.emailVerificationCode.expiryDate <= Date.now()) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Verification code has expired',
-      });
-    }
-
-    // validate the new email
-    if (!validator.isEmail(newEmail)) {
-      return next({
-        statusCode: 400,
-        message: 'Invalid email address',
-      });
-    }
-
-    // validate the new email is already use or not
-    const existingUser = await User.findOne({ email: newEmail });
-    if (existingUser) {
-      return next({
-        statusCode: 400,
-        message: 'Email address already in use',
-      });
-    }
-
-    user.email = newEmail;
-    user.emailVerificationCode = {}; // Remove the verification code
-    await user.save();
-
-    res.json({
-      status: 'success',
-      message: 'Email updated successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 module.exports = router;
