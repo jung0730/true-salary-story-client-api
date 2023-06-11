@@ -10,12 +10,15 @@ true-salary-story-client-api/
 │ │ │ ├── linePay.js
 │ │ ├── database.js
 │ │ ├── index.js
+│ │ ├── mailer.js
 │ │ ├── passport.js
 │ ├── middleware/
 │ │ ├── errorHandler.js
 │ │ ├── jwtAuthMiddleware.js
+│ │ ├── partialPostInfosMiddleware
 │ ├── models/
 │ │ ├── Company.js
+│ │ ├── Consult.js
 │ │ ├── Keyword.js
 │ │ ├── Point.js
 │ │ ├── PointHistory.js
@@ -31,11 +34,12 @@ true-salary-story-client-api/
 │ │ ├── company.js
 │ │ ├── index.js
 │ │ ├── order.js
-│ │ ├── point.js
 │ │ ├── public.js
 │ │ ├── salary.js
 │ │ ├── social.js
 │ │ ├── user.js
+│ ├── websocket/
+│ │ ├── index.js
 │ ├── app.js
 ├── .env
 ```

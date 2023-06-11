@@ -4,6 +4,9 @@ const router = express.Router();
 const User = require('models/User');
 const PointHistory = require('models/PointHistory');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const smtpTransport = require('config/mailer');
+const CryptoJS = require('crypto-js');
+const validator = require('validator');
 
 function getCurrentUtcDate() {
   const nowTime = new Date();
@@ -37,6 +40,16 @@ function hasCheckedInYesterday(user) {
       user.points.lastCheckIn.getUTCDate(),
     );
   return lastCheckIn === yesterday.getTime();
+}
+
+function generateVerificationCode(length) {
+  // Generate a random word array.
+  const wordArray = CryptoJS.lib.WordArray.random(length / 2); // length/2 because each byte is 2 characters
+
+  // Convert the word array to a hexadecimal string.
+  const verificationCode = wordArray.toString(CryptoJS.enc.Hex);
+
+  return verificationCode;
 }
 
 router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
@@ -118,6 +131,141 @@ router.post('/checkIn', jwtAuthMiddleware, async (req, res, next) => {
       status: 'success',
       message: 'Check-in successful, points updated',
       data: { checkInStreak: user.points.checkInStreak },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Send email verification code
+router.post(
+  '/sendEmailVerificationCode',
+  jwtAuthMiddleware,
+  async (req, res, next) => {
+    try {
+      const { newEmail } = req.body;
+
+      // validate the new email
+      if (!validator.isEmail(newEmail)) {
+        return next({
+          statusCode: 400,
+          message: 'Invalid email address',
+        });
+      }
+
+      // validate the new email is already use or not
+      const existingUser = await User.findOne({ email: newEmail });
+      if (existingUser) {
+        return next({
+          statusCode: 400,
+          message: 'Email address already in use',
+        });
+      }
+
+      const verificationCode = generateVerificationCode(4);
+
+      // Store the verification code and expiry date
+      await User.updateOne(
+        { _id: req.user.id },
+        {
+          emailVerificationCode: {
+            code: verificationCode,
+            expiryDate: new Date(Date.now() + 60 * 1000), // 1 minute
+          },
+        },
+      );
+
+      // Send the verification code to the new email
+      const mailOptions = {
+        from: process.env.EMAIL_ADDRESS,
+        to: newEmail,
+        subject: '真薪話 Email verification code',
+        text: `Your verification code is: ${verificationCode}`,
+        html: `<p>Your verification code is: <strong>${verificationCode}</strong></p>`,
+      };
+
+      await smtpTransport.sendMail(mailOptions, (error, response) => {
+        if (error) {
+          console.log(error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Error sending verification code',
+          });
+        }
+        console.log(response);
+        smtpTransport.close();
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Verification code sent',
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// Update User Email
+router.post('/updateEmail', jwtAuthMiddleware, async (req, res, next) => {
+  try {
+    const { verificationCode, newEmail } = req.body;
+
+    // Validate the verification code
+    if (!verificationCode) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Verification code is required',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+      });
+    }
+
+    if (user.emailVerificationCode.code !== verificationCode) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid verification code',
+      });
+    }
+
+    if (user.emailVerificationCode.expiryDate <= Date.now()) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Verification code has expired',
+      });
+    }
+
+    // validate the new email
+    if (!validator.isEmail(newEmail)) {
+      return next({
+        statusCode: 400,
+        message: 'Invalid email address',
+      });
+    }
+
+    // validate the new email is already use or not
+    const existingUser = await User.findOne({ email: newEmail });
+    if (existingUser) {
+      return next({
+        statusCode: 400,
+        message: 'Email address already in use',
+      });
+    }
+
+    user.email = newEmail;
+    user.emailVerificationCode = {}; // Remove the verification code
+    await user.save();
+
+    res.json({
+      status: 'success',
+      message: 'Email updated successfully',
     });
   } catch (error) {
     next(error);
