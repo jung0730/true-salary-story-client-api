@@ -60,6 +60,7 @@ router.get(
           path: 'createUser',
           select: 'displayName _id',
         })
+        .sort({ createDate: -1 })
         .skip((page - 1) * perPage)
         .limit(perPage)
         .select(
@@ -101,6 +102,7 @@ router.get(
       }
 
       const data = await Post.find(findRule)
+        .sort({ createDate: -1 })
         .skip((page - 1) * perPage)
         .limit(perPage)
         .select('title companyName createDate taxId employmentType');
@@ -327,6 +329,7 @@ router.get('/account/consult/list', jwtAuthMiddleware, async (req, res) => {
         path: 'activePost',
         select: 'title companyName',
       })
+      .sort({ updateDate: -1 })
       .select('sender receiver messages activePost updateDate');
 
     return res.json({
