@@ -70,9 +70,36 @@ const init = (server) => {
         } else {
           console.log(`Receiver ${receiverId} is not connected.`);
         }
+      } else if (message.type === 'create') {
+        const { receiverId } = message;
+
+        const receiverSocket = connections.get(receiverId);
+
+        const findRule = {
+          $or: [{ sender: receiverId }, { receiver: receiverId }],
+        };
+        const data = await Consult.find(findRule)
+          .populate({
+            path: 'activePost',
+            select: 'title companyName',
+          })
+          .sort({ updateDate: -1 })
+          .select('sender receiver messages activePost updateDate');
+
+        const payload = {
+          type: 'create',
+          data,
+        };
+
+        if (receiverSocket) {
+          receiverSocket.send(JSON.stringify(payload));
+        }
+        console.log(
+          `Received new message, retrieve data..., total ${data.length}.`,
+        );
       }
 
-      console.log('ws: -----', ws.userId);
+      console.log('ws userId: -----', ws.userId);
     });
 
     ws.on('close', () => {

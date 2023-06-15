@@ -143,7 +143,7 @@ router.post(
         },
       });
       if (isDuplicate) {
-        return res.json({ message: '您已訂閱' });
+        return res.status(400).json({ message: '您已訂閱' });
       }
 
       await User.updateOne(
@@ -299,6 +299,12 @@ router.post('/account/consult', jwtAuthMiddleware, async (req, res) => {
   const userId = req.user.id;
 
   try {
+    const findRule = { $or: [{ sender: userId }, { activePost: postId }] };
+    const isDuplicate = await Consult.find(findRule);
+    if (isDuplicate) {
+      return res.status(400).json({ message: '您已請教過' });
+    }
+
     const consult = new Consult({
       sender: userId,
       receiver: receiverId,
