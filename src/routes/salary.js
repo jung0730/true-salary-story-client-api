@@ -641,9 +641,9 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
 
   try {
     const userPoints = await Point.findOne({ user: userId });
+    post.unlockedUsers.push({ user: userId, createdAt: new Date() });
     const result = await post.save();
     userPoints.point += 200; // TODO 可設定成 config
-    post.unlockedUsers.push({ user: userId, createdAt: new Date() });
     await userPoints.save();
 
     const currentDate = new Date();
