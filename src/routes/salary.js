@@ -587,6 +587,7 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
         createUser: post.createUser,
         postId,
         type: getPostType(post),
+        employmentType: post.employmentType,
       };
 
       return res.status(200).json({
