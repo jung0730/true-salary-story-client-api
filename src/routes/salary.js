@@ -550,7 +550,12 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
   const userId = req.user && req.user.id;
 
   try {
-    const post = await Post.findById(postId);
+    const query = {
+      _id: postId,
+      status: 'approved',
+    };
+
+    const post = await Post.findOne(query);
 
     if (!post) {
       return res.status(404).json({
