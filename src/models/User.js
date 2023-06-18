@@ -50,6 +50,18 @@ const UserSchema = new mongoose.Schema({
     code: String,
     expiryDate: Date,
   },
+  biometricLogin: {
+    type: Boolean,
+    default: false, // default value is 'false' indicating biometric login is disabled initially
+  },
+  credentials: {
+    type: Array,
+    default: [], // default value is an empty array
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const User = mongoose.model('User', UserSchema);

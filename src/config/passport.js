@@ -40,8 +40,25 @@ passport.use(
           expiresIn: '1h',
         });
 
+        const refreshToken = jwt.sign(
+          { id: user.id, tokenVersion: user.tokenVersion },
+          config.refreshTokenSecret,
+          {
+            expiresIn: '30d', // Refresh token expires in 30 days
+          },
+        );
+
         // Add the token to the user object.
         user.token = token;
+        user.refreshToken = refreshToken;
+
+        // Set the refreshToken in an HTTP-Only cookie, for avoiding XSS attacks.
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: true, // set to true in a production environment to ensure the cookie is sent over HTTPS
+          sameSite: 'strict', // can be set to 'strict' or 'lax' to help prevent CSRF attacks
+          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        });
 
         return done(null, user);
       } catch (error) {
