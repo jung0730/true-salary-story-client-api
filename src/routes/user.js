@@ -64,7 +64,7 @@ function generateVerificationCode(length) {
 router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id)
-      .select('displayName email profilePicture')
+      .select('displayName email profilePicture biometricLogin')
       .populate('points');
 
     if (!user) {

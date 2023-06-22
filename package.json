@@ -20,6 +20,7 @@
     "format": "prettier --write '*/**/*.{js,ts,json,md}'"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^7.3.0",
     "axios": "^1.4.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.1.1",
@@ -35,8 +36,8 @@
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
     "uuid": "^9.0.0",
-    "ws": "^8.13.0",
-    "validator": "^13.9.0"
+    "validator": "^13.9.0",
+    "ws": "^8.13.0"
   },
   "devDependencies": {
     "eslint": "^8.40.0",
