@@ -37,6 +37,10 @@ const ConsultSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  isRead: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Consult = mongoose.model('Consult', ConsultSchema);

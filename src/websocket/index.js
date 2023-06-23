@@ -56,6 +56,7 @@ const init = (server) => {
                 createDate: Date.now(),
               },
             },
+            isRead: false,
           },
           { new: true },
         );
@@ -97,6 +98,19 @@ const init = (server) => {
         console.log(
           `Received new message, retrieve data..., total ${data.length}.`,
         );
+      } else if (message.type === 'read') {
+        const { consultId } = message;
+
+        await Consult.findByIdAndUpdate(
+          {
+            _id: consultId,
+          },
+          {
+            isRead: true,
+          },
+          { new: true },
+        );
+        console.log(`${consultId} have read`);
       }
 
       console.log('ws userId: -----', ws.userId);
