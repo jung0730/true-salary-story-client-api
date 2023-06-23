@@ -50,7 +50,7 @@ const UserSchema = new mongoose.Schema({
     code: String,
     expiryDate: Date,
   },
-  biometricLogin: {
+  biometricEnable: {
     type: Boolean,
     default: false, // default value is 'false' indicating biometric login is disabled initially
   },

@@ -30,80 +30,23 @@ router.post('/logout', jwtAuthMiddleware, async (req, res, next) => {
   }
 });
 
-// every time user biometric login, we will generate a new token
-router.post('/refreshToken', async (req, res) => {
-  const refreshToken = req.headers['x-refresh-token'];
-
-  if (!refreshToken) {
-    return res.status(401).json({ message: 'No refresh token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(refreshToken, config.refreshTokenSecret);
-    const user = await User.findById(decoded.id);
-
-    // Check if the refresh token was issued before the logout timestamp
-    if (
-      user.logoutTimestamp &&
-      decoded.iat * 1000 < user.logoutTimestamp.getTime()
-    ) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Refresh token is expired',
-        data: null,
-      });
-    }
-
-    // Check token version
-    if (user.tokenVersion !== decoded.tokenVersion) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Refresh token is expired',
-        data: null,
-      });
-    }
-
-    const newAccessToken = jwt.sign({ id: user.id }, config.jwtSecret, {
-      expiresIn: '1h',
-    });
-
-    return res.json({ accessToken: newAccessToken });
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid refresh token' });
-  }
-});
-
-// enable biometric login
-router.patch('/enableBiometric', jwtAuthMiddleware, async (req, res, next) => {
+// Toggle Biometric
+router.patch('/toggleBiometric', jwtAuthMiddleware, async (req, res, next) => {
   const user = req.user;
 
   try {
-    user.biometricLogin = !user.biometricLogin;
+    user.biometricEnable = req.body.enable; // Enable or disable biometric login
+    if (!req.body.enable) user.credentials = []; // Remove all stored credentials when disabling
     await user.save();
+
     res.status(200).json({
       status: 'success',
-      message: 'Biometric enable successfully',
+      message: req.body.enable
+        ? 'Biometric enabled successfully'
+        : 'Biometric disabled successfully',
       data: {
-        biometricLogin: user.biometricLogin,
+        biometricEnable: user.biometricEnable,
       },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Remove user credentials
-router.patch('/disableBiometric', jwtAuthMiddleware, async (req, res, next) => {
-  const user = req.user;
-
-  try {
-    user.biometricLogin = false; // Disable biometric login
-    user.credentials = []; // Remove all stored credentials
-    await user.save();
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Biometric disabled successfully',
     });
   } catch (error) {
     next(error);
@@ -125,7 +68,7 @@ router.post(
       }
 
       // check if user has enabled biometric
-      if (!user.biometricLogin) {
+      if (!user.biometricEnable) {
         return next({
           message: 'Biometric login is not enabled.',
           statusCode: 400,
@@ -208,12 +151,55 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
   }
 });
 
+// every time user biometric login, we will generate a new token
+router.post('/refreshToken', async (req, res) => {
+  const refreshToken = req.headers['x-refresh-token'];
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'No refresh token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, config.refreshTokenSecret);
+    const user = await User.findById(decoded.id);
+
+    // Check if the refresh token was issued before the logout timestamp
+    if (
+      user.logoutTimestamp &&
+      decoded.iat * 1000 < user.logoutTimestamp.getTime()
+    ) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Refresh token is expired',
+        data: null,
+      });
+    }
+
+    // Check token version
+    if (user.tokenVersion !== decoded.tokenVersion) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Refresh token is expired',
+        data: null,
+      });
+    }
+
+    const newAccessToken = jwt.sign({ id: user.id }, config.jwtSecret, {
+      expiresIn: '1h',
+    });
+
+    return res.json({ accessToken: newAccessToken });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid refresh token' });
+  }
+});
+
 // 3. generate assertion options for user login biometric
 router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const user = req.user;
 
-    if (!user.biometricLogin) {
+    if (!user.biometricEnable) {
       return res.status(400).json({ error: 'Biometric login is not enabled.' });
     }
 
