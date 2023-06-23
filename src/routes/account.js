@@ -336,7 +336,9 @@ router.get('/account/consult/list', jwtAuthMiddleware, async (req, res) => {
         select: 'title companyName',
       })
       .sort({ updateDate: -1 })
-      .select('sender receiver messages activePost updateDate isRead');
+      .select(
+        'sender receiver messages activePost updateDate isSenderRead isReceiverRead',
+      );
 
     return res.json({
       message: 'success',

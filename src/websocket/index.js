@@ -56,13 +56,41 @@ const init = (server) => {
                 createDate: Date.now(),
               },
             },
-            isRead: false,
           },
           { new: true },
         );
 
         const addedItem = res.messages[res.messages.length - 1];
         console.log(addedItem);
+
+        const data = await Consult.find({ _id: consultId });
+        const isSender = data[0].sender.toString() === senderId;
+        const isReceiver = data[0].receiver.toString() === senderId;
+
+        if (isSender) {
+          await Consult.findByIdAndUpdate(
+            {
+              _id: consultId,
+            },
+            {
+              isSenderRead: true,
+              isReceiverRead: false,
+            },
+            { new: true },
+          );
+        }
+        if (isReceiver) {
+          await Consult.findByIdAndUpdate(
+            {
+              _id: consultId,
+            },
+            {
+              isSenderRead: false,
+              isReceiverRead: true,
+            },
+            { new: true },
+          );
+        }
 
         senderSocket.send(JSON.stringify(payload));
 
@@ -99,18 +127,35 @@ const init = (server) => {
           `Received new message, retrieve data..., total ${data.length}.`,
         );
       } else if (message.type === 'read') {
-        const { consultId } = message;
+        const { consultId, readerId } = message;
 
-        await Consult.findByIdAndUpdate(
-          {
-            _id: consultId,
-          },
-          {
-            isRead: true,
-          },
-          { new: true },
-        );
-        console.log(`${consultId} have read`);
+        const data = await Consult.find({ _id: consultId });
+        const isSender = data[0].sender.toString() === readerId;
+        const isReceiver = data[0].receiver.toString() === readerId;
+
+        if (isSender) {
+          await Consult.findByIdAndUpdate(
+            {
+              _id: consultId,
+            },
+            {
+              isSenderRead: true,
+            },
+            { new: true },
+          );
+        }
+        if (isReceiver) {
+          await Consult.findByIdAndUpdate(
+            {
+              _id: consultId,
+            },
+            {
+              isReceiverRead: true,
+            },
+            { new: true },
+          );
+        }
+        console.log(`${consultId} user ${readerId} have read`);
       }
 
       console.log('ws userId: -----', ws.userId);

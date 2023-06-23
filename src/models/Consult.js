@@ -37,7 +37,11 @@ const ConsultSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  isRead: {
+  isSenderRead: {
+    type: Boolean,
+    default: false,
+  },
+  isReceiverRead: {
     type: Boolean,
     default: false,
   },
