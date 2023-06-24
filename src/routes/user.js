@@ -191,13 +191,11 @@ router.post(
 
       await smtpTransport.sendMail(mailOptions, (error, response) => {
         if (error) {
-          console.log(error);
           return res.status(500).json({
             status: 'error',
             message: 'Error sending verification code',
           });
         }
-        console.log(response);
         smtpTransport.close();
       });
 

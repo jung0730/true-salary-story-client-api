@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const base64url = require('base64url');
 const config = require('config');
 const jwt = require('jsonwebtoken');
 const {
-  generateAttestationOptions,
-  verifyAttestationResponse,
-  generateAssertionOptions,
-  verifyAssertionResponse,
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
 } = require('@simplewebauthn/server');
 const User = require('models/User');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
@@ -17,7 +18,6 @@ router.post('/logout', jwtAuthMiddleware, async (req, res, next) => {
     // record logout timestamp
     await User.findByIdAndUpdate(req.user.id, {
       logoutTimestamp: new Date(),
-      $inc: { tokenVersion: 1 },
     });
 
     res.status(200).json({
@@ -59,6 +59,7 @@ router.post(
   jwtAuthMiddleware,
   async (req, res, next) => {
     try {
+      const { isAndroid } = req.body;
       const user = await User.findById(req.user.id);
 
       if (!user) {
@@ -75,19 +76,25 @@ router.post(
         });
       }
 
-      const challenge = crypto.randomBytes(32).toString('hex');
+      const challengeBuffer = crypto.randomBytes(32);
+      const challenge = base64url.encode(challengeBuffer);
 
-      const options = generateAttestationOptions({
+      const options = generateRegistrationOptions({
         rpName: '真薪話(True Salary Story)',
+        rpID: process.env.EXPECTED_RPID,
         userID: user.id,
         userName: user.email,
-        challenge,
+        challenge: challenge,
         attestationType: 'direct',
-        authenticatorSelection: {
-          authenticatorAttachment: 'cross-platform',
-          userVerification: 'required',
-        },
       });
+
+      if (isAndroid) {
+        Object.assign(options, {
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+          },
+        });
+      }
 
       if (!options) {
         return next({
@@ -96,13 +103,19 @@ router.post(
         });
       }
 
-      req.session.challenge = challenge;
+      req.session.challenge = options.challenge;
       req.session.user_id = user.id;
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Attestation options generated successfully',
-        data: options,
+      req.session.save((error) => {
+        if (error) {
+          next({
+            message: 'Save session failed.',
+          });
+        }
+        res.status(200).json({
+          status: 'success',
+          message: 'Attestation options generated successfully',
+          data: options,
+        });
       });
     } catch (error) {
       next({
@@ -115,26 +128,34 @@ router.post(
 // 2. verify attestation response if passed, save credential to user data
 router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
   try {
-    const { body } = req.body;
+    const { body } = req;
     const { challenge, user_id } = req.session;
 
     const user = await User.findById(user_id);
-
     if (!user) {
       return res
         .status(404)
         .json({ status: 'error', message: 'User not found' });
     }
 
-    const { verified, credential } = await verifyAttestationResponse({
-      credential: body,
-      expectedChallenge: `${challenge}`,
+    const verification = await verifyRegistrationResponse({
+      response: body,
+      expectedChallenge: challenge,
       expectedOrigin: process.env.FRONTEND_URL,
       expectedRPID: process.env.EXPECTED_RPID,
     });
+    const { verified, registrationInfo } = verification;
 
     if (verified) {
       // save credential to user data
+      const credential = {
+        id: registrationInfo.credentialID,
+        type: 'public-key',
+        publicKey: registrationInfo.credentialPublicKey,
+        fmt: registrationInfo.fmt,
+        counter: registrationInfo.counter,
+        aaguid: registrationInfo.aaguid,
+      };
       user.credentials.push(credential);
       await user.save();
       res.status(200).json({
@@ -152,8 +173,8 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
 });
 
 // every time user biometric login, we will generate a new token
-router.post('/refreshToken', async (req, res) => {
-  const refreshToken = req.headers['x-refresh-token'];
+router.post('/refreshToken', async (req, res, next) => {
+  const refreshToken = req.cookies['refreshToken'];
 
   if (!refreshToken) {
     return res.status(401).json({ message: 'No refresh token provided' });
@@ -163,11 +184,9 @@ router.post('/refreshToken', async (req, res) => {
     const decoded = jwt.verify(refreshToken, config.refreshTokenSecret);
     const user = await User.findById(decoded.id);
 
-    // Check if the refresh token was issued before the logout timestamp
-    if (
-      user.logoutTimestamp &&
-      decoded.iat * 1000 < user.logoutTimestamp.getTime()
-    ) {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000; // in milliseconds
+
+    if (decoded.iat * 1000 < Date.now() - THIRTY_DAYS) {
       return res.status(401).json({
         status: 'error',
         message: 'Refresh token is expired',
@@ -175,22 +194,17 @@ router.post('/refreshToken', async (req, res) => {
       });
     }
 
-    // Check token version
-    if (user.tokenVersion !== decoded.tokenVersion) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Refresh token is expired',
-        data: null,
-      });
-    }
-
-    const newAccessToken = jwt.sign({ id: user.id }, config.jwtSecret, {
+    const token = jwt.sign({ id: user.id }, config.jwtSecret, {
       expiresIn: '1h',
     });
 
-    return res.json({ accessToken: newAccessToken });
+    res.status(200).json({
+      status: 'success',
+      message: 'Token refreshed successfully',
+      data: { token },
+    });
   } catch (error) {
-    res.status(401).json({ message: 'Invalid refresh token' });
+    next(error);
   }
 });
 
@@ -203,16 +217,18 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
       return res.status(400).json({ error: 'Biometric login is not enabled.' });
     }
 
-    const challenge = crypto.randomBytes(32).toString('hex');
+    const challengeBuffer = crypto.randomBytes(32);
+    const challenge = base64url.encode(challengeBuffer);
 
-    const options = generateAssertionOptions({
-      timeout: 60000,
+    const options = generateAuthenticationOptions({
+      timeout: 100000,
       rpID: process.env.EXPECTED_RPID,
-      challenge,
+      challenge: challenge,
       allowCredentials: user.credentials,
     });
+    console.log(1, options);
 
-    req.session.challenge = challenge;
+    req.session.challenge = options.challenge;
     req.session.user_id = user.id;
 
     res.status(200).json({
@@ -228,7 +244,7 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
 // 4. verify assertion response if passed, return jwt token
 router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
   try {
-    const { body } = req.body;
+    const { body } = req;
     const { challenge, user_id } = req.session;
 
     const user = await User.findById(user_id);
@@ -243,6 +259,7 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
     const expectedCredential = user.credentials.find(
       ({ id }) => id === body.id,
     );
+    console.log(2, expectedCredential);
 
     if (!expectedCredential) {
       return res.status(400).json({
@@ -251,29 +268,31 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
       });
     }
 
-    const { verified } = await verifyAssertionResponse({
-      credential: body,
-      expectedChallenge: `${challenge}`,
+    const { verified } = await verifyAuthenticationResponse({
+      response: body,
+      expectedChallenge: challenge,
       expectedOrigin: process.env.FRONTEND_URL,
       expectedRPID: process.env.EXPECTED_RPID,
       authenticator: expectedCredential,
     });
+    console.log(3, verified);
 
     if (verified) {
-      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-        expiresIn: '1d',
+      // Set the refreshToken in an HTTP-Only cookie.
+      res.cookie('refreshToken', user.refreshToken, {
+        httpOnly: true,
+        secure: true, // set to true in a production environment to ensure the cookie is sent over HTTPS
+        sameSite: 'strict', // can be set to 'strict' or 'lax' to help prevent CSRF attacks
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // sets the cookie to expire in 30 days
       });
-      return res.status(200).json({
-        status: 'success',
-        message: 'User logged in successfully',
-        data: { token },
+
+      return res.redirect(`${process.env.FRONTEND_URL}`);
+    } else {
+      res.status(400).json({
+        status: 'error',
+        message: 'Could not verify user.',
       });
     }
-
-    res.status(400).json({
-      status: 'error',
-      message: 'Could not verify user.',
-    });
   } catch (error) {
     next(error);
   }
