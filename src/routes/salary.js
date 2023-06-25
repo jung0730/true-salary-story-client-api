@@ -5,9 +5,17 @@ const Company = require('models/Company');
 const Keyword = require('models/Keyword');
 const Point = require('models/Point');
 const PointHistory = require('models/PointHistory');
+const KeywordHistory = require('models/KeywordHistory');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
+
+const recordKeywordHistory = async (keyword) => {
+  const keywordHistory = new KeywordHistory({
+    keyword: keyword,
+  });
+  await keywordHistory.save();
+};
 
 const getCompanyAddress = async (taxId) => {
   const companyAddress = await axios
@@ -368,6 +376,7 @@ router.get('/salary/search', async (req, res) => {
 
   try {
     if (title) {
+      await recordKeywordHistory(title);
       const regex = new RegExp(title, 'i');
       const titleResults = await Post.find({
         title: { $regex: regex },
@@ -392,6 +401,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     if (companyName) {
+      await recordKeywordHistory(companyName);
       const regex = new RegExp(companyName, 'i');
       const posts = await Post.find({
         companyName: { $regex: regex },
@@ -439,6 +449,7 @@ router.get('/salary/search', async (req, res) => {
     }
 
     if (type) {
+      await recordKeywordHistory(type);
       const regex = new RegExp(type, 'i');
       const companyResultsByType = await Company.find({
         type: { $regex: regex },
