@@ -173,6 +173,7 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
 
 // every time user biometric login, we will generate a new token
 router.post('/refreshToken', async (req, res, next) => {
+  console.log(1, req.cookies);
   const refreshToken = req.cookies['refreshToken'];
 
   if (!refreshToken) {
