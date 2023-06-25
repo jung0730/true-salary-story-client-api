@@ -103,21 +103,14 @@ router.post(
         });
       }
 
-      req.session.challenge = options.challenge;
-      req.session.user_id = user.id;
-      console.log(1, req.session);
-      req.session.save((error) => {
-        if (error) {
-          next({
-            message: 'Save session failed.',
-          });
-        }
-        console.log(2, req.session);
-        res.status(200).json({
-          status: 'success',
-          message: 'Attestation options generated successfully',
-          data: options,
-        });
+      res.status(200).json({
+        status: 'success',
+        message: 'Attestation options generated successfully',
+        data: {
+          options,
+          challenge: options.challenge,
+          userId: user.id,
+        },
       });
     } catch (error) {
       next({
@@ -131,17 +124,15 @@ router.post(
 router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const { body } = req;
-    const { challenge, user_id } = req.session;
-    console.log(3, body);
-    console.log(4, challenge);
-    console.log(5, user_id);
-    const user = await User.findById(user_id);
+    const { challenge, userId } = body;
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         status: 'error',
         message: 'User not found',
         data: {
-          userId: user_id,
+          userId: userId,
         },
       });
     }
@@ -152,10 +143,8 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
       expectedOrigin: process.env.FRONTEND_URL,
       expectedRPID: process.env.EXPECTED_RPID,
     });
-    console.log(6, verification);
     const { verified, registrationInfo } = verification;
-    console.log(7, verified);
-    console.log(8, registrationInfo);
+
     if (verified) {
       // save credential to user data
       const credential = {
