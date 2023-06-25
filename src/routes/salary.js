@@ -597,6 +597,7 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
         isLocked: true,
         createUser: post.createUser,
         postId,
+        inService: post.inService,
         type: getPostType(post),
         employmentType: post.employmentType,
       };
