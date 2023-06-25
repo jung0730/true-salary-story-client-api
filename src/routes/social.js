@@ -19,9 +19,18 @@ router.get('/google/callback', (req, res, next) => {
       return next({ message: 'Authentication failed', statusCode: 401 });
     }
 
-    res.redirect(
-      `${FRONTEND_URL}/login?token=${user.token}?refreshToken=${user.refreshToken}`,
+    // Create a JSON object containing the tokens
+    const tokens = {
+      token: user.token,
+      refreshToken: user.refreshToken,
+    };
+
+    // Base64 encode the JSON object
+    const encodedTokens = Buffer.from(JSON.stringify(tokens)).toString(
+      'base64',
     );
+
+    res.redirect(`${FRONTEND_URL}/login?tokens=${encodedTokens}`);
   })(req, res, next);
 });
 
