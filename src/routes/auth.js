@@ -283,7 +283,7 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
       res.cookie('refreshToken', user.refreshToken, {
         httpOnly: true,
         secure: true, // set to true in a production environment to ensure the cookie is sent over HTTPS
-        sameSite: 'strict', // can be set to 'strict' or 'lax' to help prevent CSRF attacks
+        sameSite: 'none', // can be set to 'strict' or 'lax' to help prevent CSRF attacks
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // sets the cookie to expire in 30 days
       });
 
