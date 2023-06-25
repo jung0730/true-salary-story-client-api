@@ -86,6 +86,7 @@ router.post(
         userName: user.email,
         challenge: challenge,
         attestationType: 'direct',
+        timeout: 10000,
       });
 
       if (isAndroid) {
@@ -220,11 +221,21 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
     const challengeBuffer = crypto.randomBytes(32);
     const challenge = base64url.encode(challengeBuffer);
 
+    console.log(2, user.credentials);
+
     const options = generateAuthenticationOptions({
-      timeout: 100000,
       rpID: process.env.EXPECTED_RPID,
       challenge: challenge,
-      allowCredentials: user.credentials,
+      allowCredentials: user.credentials.map((credential) => ({
+        id: credential.id,
+        type: credential.type,
+        publicKey: credential.publicKey,
+        fmt: credential.fmt,
+        counter: credential.counter,
+        transports: ['internal'],
+      })),
+      timeout: 10000,
+      userVerification: 'preferred',
     });
 
     res.status(200).json({
