@@ -225,15 +225,15 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
       challenge: challenge,
       allowCredentials: user.credentials,
     });
-    console.log(1, options);
-
-    req.session.challenge = options.challenge;
-    req.session.user_id = user.id;
 
     res.status(200).json({
       status: 'success',
       message: 'Assertion options generated successfully',
-      data: options,
+      data: {
+        options,
+        challenge: options.challenge,
+        userId: user.id,
+      },
     });
   } catch (error) {
     next(error);
@@ -244,9 +244,9 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
 router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const { body } = req;
-    const { challenge, user_id } = req.session;
+    const { challenge, userId } = body;
 
-    const user = await User.findById(user_id);
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -255,6 +255,7 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
       });
     }
 
+    console.log(1, body);
     const expectedCredential = user.credentials.find(
       ({ id }) => id === body.id,
     );
@@ -285,7 +286,7 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // sets the cookie to expire in 30 days
       });
 
-      return res.redirect(`${process.env.FRONTEND_URL}`);
+      return res.redirect(`${process.env.FRONTEND_URL}/user`);
     } else {
       res.status(400).json({
         status: 'error',
