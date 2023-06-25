@@ -12,6 +12,7 @@ const ws = require('./websocket');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const cookieParser = require('cookie-parser');
+require('./cronjob');
 
 // Initialize Express application
 const app = express();
