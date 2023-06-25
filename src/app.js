@@ -10,6 +10,7 @@ const passport = require('passport');
 require('config/passport');
 const ws = require('./websocket');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const cookieParser = require('cookie-parser');
 
 // Initialize Express application
@@ -39,6 +40,9 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === 'production' ? true : false,
     },
+    store: new MongoStore({
+      mongoUrl: process.env.MONGODB_URI,
+    }),
   }),
 );
 
