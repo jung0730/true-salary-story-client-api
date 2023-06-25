@@ -135,9 +135,13 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
     console.log(3, user_id);
     const user = await User.findById(user_id);
     if (!user) {
-      return res
-        .status(404)
-        .json({ status: 'error', message: 'User not found' });
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found',
+        data: {
+          userId: user_id,
+        },
+      });
     }
 
     const verification = await verifyRegistrationResponse({
