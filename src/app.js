@@ -34,15 +34,16 @@ app.use(cookieParser());
 // Configure express-session middleware
 app.use(
   session({
+    store: new MongoStore({
+      mongoUrl: process.env.MONGODB_URI,
+    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: {
       secure: process.env.NODE_ENV === 'production' ? true : false,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     },
-    store: new MongoStore({
-      mongoUrl: process.env.MONGODB_URI,
-    }),
   }),
 );
 
