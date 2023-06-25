@@ -51,3 +51,9 @@ true-salary-story-client-api/
 ```bash
 openssl rand -base64 32
 ```
+
+## How to generate SESSION_SECRET
+
+```bash
+openssl rand -hex 32
+```

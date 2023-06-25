@@ -9,6 +9,8 @@ const routes = require('routes');
 const passport = require('passport');
 require('config/passport');
 const ws = require('./websocket');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
 // Initialize Express application
 const app = express();
@@ -21,10 +23,26 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    credentials: true,
   }),
 );
-app.use(passport.initialize());
+
 app.use(express.json());
+app.use(cookieParser());
+
+// Configure express-session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production' ? true : false,
+    },
+  }),
+);
+
+app.use(passport.initialize());
 
 // Set up routes
 app.use('/', routes);

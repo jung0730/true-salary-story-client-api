@@ -41,7 +41,7 @@ passport.use(
         });
 
         const refreshToken = jwt.sign(
-          { id: user.id, tokenVersion: user.tokenVersion },
+          { id: user.id },
           config.refreshTokenSecret,
           {
             expiresIn: '30d', // Refresh token expires in 30 days
