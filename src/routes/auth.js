@@ -130,7 +130,9 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
   try {
     const { body } = req;
     const { challenge, user_id } = req.session;
-
+    console.log(1, body);
+    console.log(2, challenge);
+    console.log(3, user_id);
     const user = await User.findById(user_id);
     if (!user) {
       return res
@@ -144,8 +146,10 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
       expectedOrigin: process.env.FRONTEND_URL,
       expectedRPID: process.env.EXPECTED_RPID,
     });
+    console.log(4, verification);
     const { verified, registrationInfo } = verification;
-
+    console.log(5, verified);
+    console.log(6, registrationInfo);
     if (verified) {
       // save credential to user data
       const credential = {
