@@ -173,8 +173,8 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
 
 // every time user biometric login, we will generate a new token
 router.post('/refreshToken', async (req, res, next) => {
-  console.log(1, req.cookies);
-  const refreshToken = req.cookies['refreshToken'];
+  const { refreshToken } = req.body;
+  console.log(1, refreshToken);
 
   if (!refreshToken) {
     return res.status(401).json({ message: 'No refresh token provided' });
@@ -281,7 +281,6 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
     if (verified) {
       // Set the refreshToken in an HTTP-Only cookie.
       res.cookie('refreshToken', user.refreshToken, {
-        httpOnly: true,
         secure: true, // set to true in a production environment to ensure the cookie is sent over HTTPS
         sameSite: 'none', // can be set to 'strict' or 'lax' to help prevent CSRF attacks
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // sets the cookie to expire in 30 days
