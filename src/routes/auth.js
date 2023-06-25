@@ -31,7 +31,7 @@ router.post('/logout', jwtAuthMiddleware, async (req, res, next) => {
 });
 
 // Toggle Biometric
-router.patch('/toggleBiometric', jwtAuthMiddleware, async (req, res, next) => {
+router.put('/toggleBiometric', jwtAuthMiddleware, async (req, res, next) => {
   const user = req.user;
 
   try {
