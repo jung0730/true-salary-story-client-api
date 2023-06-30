@@ -16,6 +16,8 @@ const init = (server) => {
       if (message.type === 'userId') {
         const { userId } = message;
 
+        ws.userId = userId;
+
         if (connections.has(userId)) {
           console.log(
             `User ${userId} is already connected. Rejecting new connection.`,
@@ -23,7 +25,6 @@ const init = (server) => {
           return;
         }
 
-        ws.userId = userId;
         connections.set(userId, ws);
         console.log(`User ${userId} connected.`);
       } else if (message.type === 'chat') {
