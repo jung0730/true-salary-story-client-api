@@ -175,7 +175,6 @@ router.post('/verifyAttestation', jwtAuthMiddleware, async (req, res, next) => {
 // every time user biometric login, we will generate a new token
 router.post('/refreshToken', async (req, res, next) => {
   const { refreshToken } = req.body;
-  console.log(1, refreshToken);
 
   if (!refreshToken) {
     return res.status(401).json({ message: 'No refresh token provided' });
@@ -221,8 +220,6 @@ router.post('/generateAssertion', jwtAuthMiddleware, async (req, res, next) => {
     const challengeBuffer = crypto.randomBytes(32);
     const challenge = base64url.encode(challengeBuffer);
 
-    console.log(2, user.credentials);
-
     const options = generateAuthenticationOptions({
       rpID: process.env.EXPECTED_RPID,
       challenge: challenge,
@@ -267,11 +264,9 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
       });
     }
 
-    console.log(1, body);
     const expectedCredential = user.credentials.find(
       ({ id }) => id === body.id,
     );
-    console.log(2, expectedCredential);
 
     if (!expectedCredential) {
       return res.status(400).json({
@@ -287,7 +282,6 @@ router.post('/verifyAssertion', jwtAuthMiddleware, async (req, res, next) => {
       expectedRPID: process.env.EXPECTED_RPID,
       authenticator: expectedCredential,
     });
-    console.log(3, verified);
 
     if (verified) {
       return res.redirect(`${process.env.FRONTEND_URL}/user`);
