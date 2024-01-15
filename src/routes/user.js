@@ -14,7 +14,7 @@ const {
 } = require('constants');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const PointHistory = require('models/PointHistory');
-const smtpTransport = require('config/mailer');
+// const smtpTransport = require('config/mailer');
 const User = require('models/User');
 
 function getCurrentUtcDate() {
