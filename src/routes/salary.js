@@ -9,6 +9,7 @@ const KeywordHistory = require('models/KeywordHistory');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
 const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
+const successHandler = require('middleware/successHandler');
 
 const recordKeywordHistory = async (keyword) => {
   const keywordHistory = new KeywordHistory({
@@ -628,63 +629,75 @@ router.get('/salary/:id', partialPostInfosMiddleware, async (req, res) => {
   }
 });
 
+async function createNewCompany({ taxId, companyName, userId }) {
+  const company = new Company({
+    taxId,
+    companyName,
+    type: await getCompanyType(taxId),
+    address: await getCompanyAddress(taxId),
+    // TODO: be dynamic
+    photo: 'https://true-salary-story.s3.amazonaws.com/logo.png',
+    phone: '0222345678',
+    shared: 1,
+    createUser: userId,
+    updateUser: userId,
+  });
+  await company.save();
+}
+
+async function createPointHistory({ userId, post }) {
+  const currentDate = new Date();
+  const endDate = new Date(currentDate.getTime());
+  endDate.setFullYear(endDate.getFullYear() + 1);
+
+  const pointHistory = new PointHistory({
+    user: userId,
+    point: 200,
+    remark: `分享薪水情報：${post.companyName} - ${post.title}`,
+    startDate: currentDate,
+    endDate,
+  });
+  await pointHistory.save();
+}
+
 router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   const { taxId, companyName } = req.body;
   const userId = req.user.id;
-  const existingCompany = await Company.findOne({ taxId });
-  if (!existingCompany) {
-    const company = new Company({
-      companyName,
-      taxId,
-      type: await getCompanyType(taxId),
-      address: await getCompanyAddress(taxId),
-      photo: 'https://true-salary-story.s3.amazonaws.com/logo.png', // TODO 依照公司相關取得 logo
-      phone: '0222345678', // TODO 看看有沒有其他方式可取得公司電話
-      shared: 1,
-      createUser: userId,
-      updateUser: userId,
-    });
-    await company.save();
-  } else {
-    existingCompany.shared += 1;
-    await existingCompany.save();
-  }
-
-  const payload = {
-    ...req.body,
-    createUser: userId,
-  };
-
-  const post = new Post(payload);
-
   try {
-    const userPoints = await Point.findOne({ user: userId });
+    const existingCompany = await Company.findOne({ taxId });
+    if (!existingCompany) {
+      await createNewCompany({
+        taxId,
+        companyName,
+        userId,
+      });
+    } else {
+      existingCompany.shared += 1;
+      await existingCompany.save();
+    }
+
+    const payload = {
+      ...req.body,
+      createUser: userId,
+    };
+
+    const post = new Post(payload);
     post.unlockedUsers.push({ user: userId, createdAt: new Date() });
-    const result = await post.save();
-    userPoints.point += 200; // TODO 可設定成 config
+    await post.save();
+
+    const userPoints = await Point.findOne({ user: userId });
+    userPoints.point += 200;
     await userPoints.save();
 
-    const currentDate = new Date();
-    const endDate = new Date(currentDate.getTime());
-    endDate.setFullYear(endDate.getFullYear() + 1);
-
-    const pointHistory = new PointHistory({
-      user: userId,
-      point: 200,
-      remark: `分享薪水情報：${post.companyName} - ${post.title}`,
-      startDate: currentDate,
-      endDate,
+    await createPointHistory({
+      userId,
+      post,
     });
-    await pointHistory.save();
-    return res.status(200).json({
-      message: 'success',
-      result: [
-        {
-          title: result.title,
-          companyName: result.companyName,
-          point: 200, // TODO: 依照積分規則調整
-        },
-      ],
+
+    successHandler(res, {
+      title: post.title,
+      companyName: post.companyName,
+      point: 200,
     });
   } catch (error) {
     if (error) {

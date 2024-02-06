@@ -76,7 +76,7 @@ router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
     }
 
     const hasCheckedInToday = hasUserCheckedInToday(user);
-    successHandler(res, 'User data retrieved successfully', {
+    successHandler(res, {
       user,
       hasCheckedInToday,
     });

@@ -1,7 +1,6 @@
-const successHandler = (res, message, data) => {
+const successHandler = (res, data) => {
   res.json({
     status: 'success',
-    message,
     data,
   });
 };
