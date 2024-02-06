@@ -2,6 +2,7 @@
 const CryptoJS = require('crypto-js');
 const express = require('express');
 const validator = require('validator');
+const successHandler = require('middleware/successHandler');
 
 // Internal modules, sorted alphabetically
 const router = express.Router();
@@ -75,11 +76,9 @@ router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
     }
 
     const hasCheckedInToday = hasUserCheckedInToday(user);
-
-    res.status(200).json({
-      status: 'success',
-      message: 'User data retrieved successfully',
-      data: { user, hasCheckedInToday },
+    successHandler(res, 'User data retrieved successfully', {
+      user,
+      hasCheckedInToday,
     });
   } catch (error) {
     next(error);

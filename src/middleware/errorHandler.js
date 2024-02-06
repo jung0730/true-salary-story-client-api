@@ -4,9 +4,8 @@ function errorHandler(err, req, res, next) {
 
   // can add more information to the response if needed
   const errorResponse = {
-    statusCode: statusCode,
-    message: message,
-    data: null,
+    statusCode,
+    message,
   };
 
   if (err.errors) {
