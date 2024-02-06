@@ -10,45 +10,43 @@ passport.use(
     config.passport.google,
     async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // Check if the user already exists in the database.
-        let user = await User.findOne({ googleId: profile.id });
+        // atomic updates
+        // 找不到user 執行$setOnInsert, 找得到執行$set
+        const user = await User.findOneAndUpdate(
+          { googleId: profile.id },
+          {
+            $setOnInsert: {
+              googleId: profile.id,
+              displayName: profile.displayName,
+              email: profile.emails[0].value,
+              profilePicture: profile.photos[0].value,
+            },
+            $set: { loginTimestamp: new Date() },
+          },
+          // new: true returns the document after update was applied
+          // upsert: true makes it a find-and-upsert operation
+          { upsert: true, new: true },
+        );
 
-        if (!user) {
-          // If the user doesn't exist, create a new user.
-          user = await User.create({
-            googleId: profile.id,
-            displayName: profile.displayName,
-            email: profile.emails[0].value,
-            profilePicture: profile.photos[0].value,
-            loginTimestamp: new Date(),
-          });
-          // Also create an associated Point record for the new user.
-          const point = await Point.create({
-            user: user._id,
-          });
-          // Link the user to the Point record.
-          user.points = point;
-          await user.save();
-        } else {
-          // Update the login timestamp for the existing user.
-          user.loginTimestamp = new Date();
-          await user.save();
-        }
+        const point = await Point.findOneAndUpdate(
+          { user: user._id },
+          { $setOnInsert: { user: user._id } },
+          { upsert: true, new: true },
+        );
+        user.points = point._id;
+        await user.save();
 
-        // Create a JSON Web Token (JWT) for the user.
+        // user.id is a string representation of the ObjectId
         const token = jwt.sign({ id: user.id }, config.jwtSecret, {
           expiresIn: '1h',
         });
-
         const refreshToken = jwt.sign(
           { id: user.id },
           config.refreshTokenSecret,
           {
-            expiresIn: '30d', // Refresh token expires in 30 days
+            expiresIn: '30d',
           },
         );
-
-        // Add the token to the user object.
         user.token = token;
         user.refreshToken = refreshToken;
 
