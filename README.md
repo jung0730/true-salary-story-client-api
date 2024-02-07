@@ -17,6 +17,7 @@ true-salary-story-client-api/
 │ ├── middleware/
 │ │ ├── errorHandler.js
 │ │ ├── jwtAuthMiddleware.js
+│ │ ├── partialPostInfosMiddleware.js
 │ ├── models/
 │ │ ├── Company.js
 │ │ ├── Consult.js

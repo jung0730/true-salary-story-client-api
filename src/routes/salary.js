@@ -8,6 +8,7 @@ const PointHistory = require('models/PointHistory');
 const KeywordHistory = require('models/KeywordHistory');
 const axios = require('axios');
 const jwtAuthMiddleware = require('middleware/jwtAuthMiddleware');
+const partialPostInfosMiddleware = require('middleware/partialPostInfosMiddleware');
 const successHandler = require('middleware/successHandler');
 
 const recordKeywordHistory = async (keyword) => {
@@ -223,71 +224,76 @@ router.post('/salary/:id/permission', jwtAuthMiddleware, async (req, res) => {
   }
 });
 
-router.get('/salary/company/:taxId', jwtAuthMiddleware, async (req, res) => {
-  const taxId = req.params.taxId;
-  const { titleOption, sortOption, limit, page } = req.query;
+router.get(
+  '/salary/company/:taxId',
+  partialPostInfosMiddleware,
+  async (req, res) => {
+    const taxId = req.params.taxId;
+    const { titleOption, sortOption, limit, page } = req.query;
 
-  let sortOptions = {};
-  if (sortOption) {
-    switch (sortOption) {
-      case '1':
-        sortOptions = { createDate: -1 };
-        break;
-      case '2':
-        sortOptions = { yearlySalary: -1 };
-        break;
-      case '3':
-        sortOptions = { workYears: -1 };
-        break;
-      case '4':
-        sortOptions = { feeling: 1 };
-        break;
+    let sortOptions = {};
+    if (sortOption) {
+      switch (sortOption) {
+        case '1':
+          sortOptions = { createDate: -1 };
+          break;
+        case '2':
+          sortOptions = { yearlySalary: -1 };
+          break;
+        case '3':
+          sortOptions = { workYears: -1 };
+          break;
+        case '4':
+          sortOptions = { feeling: 1 };
+          break;
+      }
     }
-  }
 
-  try {
-    const query = { taxId };
-    if (titleOption && titleOption !== '全部') {
-      const titles = titleOption.split(',');
-      query.title = { $in: titles.map((title) => new RegExp(title, 'i')) };
-    }
-    query.status = 'approved';
+    try {
+      const query = { taxId };
+      if (titleOption && titleOption !== '全部') {
+        const titles = titleOption.split(',');
+        query.title = { $in: titles.map((title) => new RegExp(title, 'i')) };
+      }
+      query.status = 'approved';
 
-    const posts = await Post.find(query)
-      .sort(sortOptions)
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .limit(parseInt(limit));
+      const posts = await Post.find(query)
+        .sort(sortOptions)
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit));
 
-    if (!posts || posts.length === 0) {
-      return res.status(404).json({
-        message: '找不到該公司的薪水資訊',
-        result: [],
+      if (!posts || posts.length === 0) {
+        return res.status(404).json({
+          message: '找不到該公司的薪水資訊',
+          result: [],
+        });
+      }
+
+      const userId = req.user && req.user.id;
+      const result = posts.map((post) => {
+        const isLocked =
+          !userId ||
+          !post.unlockedUsers.some((user) => user.user.equals(userId));
+        if (isLocked) {
+          post.jobDescription = post.jobDescription.substring(0, 10) + '...';
+          post.suggestion = post.suggestion.substring(0, 10) + '...';
+        }
+        return { ...post.toJSON(), isLocked, type: getPostType(post) };
+      });
+
+      res.status(200).json({
+        message: 'success',
+        result,
+        totalCount: await Post.countDocuments(query),
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'Server error',
+        result: error.message,
       });
     }
-
-    const userId = req.user && req.user.id;
-    const result = posts.map((post) => {
-      const isLocked =
-        !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
-      if (isLocked) {
-        post.jobDescription = post.jobDescription.substring(0, 10) + '...';
-        post.suggestion = post.suggestion.substring(0, 10) + '...';
-      }
-      return { ...post.toJSON(), isLocked, type: getPostType(post) };
-    });
-
-    res.status(200).json({
-      message: 'success',
-      result,
-      totalCount: await Post.countDocuments(query),
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: 'Server error',
-      result: error.message,
-    });
-  }
-});
+  },
+);
 
 router.get('/salary/uniformNumbers/:number', jwtAuthMiddleware, (req, res) => {
   const number = req.params.number;
@@ -551,49 +557,53 @@ router.get('/salary/getTopCompany', async (req, res) => {
   }
 });
 
-router.get('/salary/:id', jwtAuthMiddleware, async (req, res, next) => {
-  const postId = req.params?.id;
-  const userId = req.user?.id;
-  try {
-    const query = {
-      _id: postId,
-      status: 'approved',
-    };
-    const post = await Post.findOne(query);
-    if (!post) {
-      return next({
-        statusCode: 404,
-        message: 'id 格式錯誤或沒有這筆薪資資訊',
-      });
-    }
+router.get(
+  '/salary/:id',
+  partialPostInfosMiddleware,
+  async (req, res, next) => {
+    const postId = req.params?.id;
+    const userId = req.user?.id;
+    try {
+      const query = {
+        _id: postId,
+        status: 'approved',
+      };
+      const post = await Post.findOne(query);
+      if (!post) {
+        return next({
+          statusCode: 404,
+          message: 'id 格式錯誤或沒有這筆薪資資訊',
+        });
+      }
 
-    const isLocked =
-      !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
-    let result = {
-      isLocked,
-      companyType: await findCompanyTypeByTaxId(post.taxId),
-      type: getPostType(post),
-    };
-    if (isLocked) {
-      result = {
-        ...post.toJSON(),
-        ...result,
-        jobDescription: post.jobDescription.substring(0, 10) + '...',
-        suggestion: post.suggestion.substring(0, 10) + '...',
+      const isLocked =
+        !userId || !post.unlockedUsers.some((user) => user.user.equals(userId));
+      let result = {
+        isLocked,
+        companyType: await findCompanyTypeByTaxId(post.taxId),
+        type: getPostType(post),
       };
-    } else {
-      post.seen += 1;
-      await post.save();
-      result = {
-        ...post.toJSON(),
-        ...result,
-      };
+      if (isLocked) {
+        result = {
+          ...post.toJSON(),
+          ...result,
+          jobDescription: post.jobDescription.substring(0, 10) + '...',
+          suggestion: post.suggestion.substring(0, 10) + '...',
+        };
+      } else {
+        post.seen += 1;
+        await post.save();
+        result = {
+          ...post.toJSON(),
+          ...result,
+        };
+      }
+      successHandler(res, result);
+    } catch (error) {
+      return next(error);
     }
-    successHandler(res, result);
-  } catch (error) {
-    return next(error);
-  }
-});
+  },
+);
 
 async function createNewCompany({ taxId, companyName, userId }) {
   const company = new Company({

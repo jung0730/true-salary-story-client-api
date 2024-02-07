@@ -11,16 +11,12 @@ module.exports = async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
   if (token == null) {
-    return next({
-      statusCode: 401,
-      message: 'No token provided',
-    });
+    return next();
   }
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     const user = await User.findById(decoded.id);
 
-    // Check if the token was issued before the logout timestamp
     if (
       user.logoutTimestamp &&
       decoded.iat * 1000 < user.logoutTimestamp.getTime()
