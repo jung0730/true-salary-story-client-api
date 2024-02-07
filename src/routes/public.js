@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('models/User');
 const Post = require('models/Post');
+const successHandler = require('middleware/successHandler');
 
 router.get('/statistics', async (req, res, next) => {
   try {
@@ -9,12 +10,12 @@ router.get('/statistics', async (req, res, next) => {
     // If feature count published posts, you should use filter. For example: {status: 'published'}
     const numberOfPosts = await Post.countDocuments({});
 
-    res.json({
+    successHandler(res, {
       registeredUsers: numberOfUsers,
       publishedPosts: numberOfPosts,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 

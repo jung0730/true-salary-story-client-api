@@ -81,7 +81,7 @@ router.get('/profile', jwtAuthMiddleware, async (req, res, next) => {
       hasCheckedInToday,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 

@@ -10,7 +10,7 @@ module.exports = async (req, res, next) => {
   ) {
     token = req.headers.authorization.split(' ')[1];
   }
-  if (token != null && token !== '') {
+  if (token == null || token === '') {
     return next({
       statusCode: 401,
       message: 'No token provided',
@@ -33,7 +33,7 @@ module.exports = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    next({
+    return next({
       statusCode: 401,
       message: 'Invalid token',
     });

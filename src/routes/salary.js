@@ -660,7 +660,7 @@ async function createPointHistory({ userId, post }) {
   await pointHistory.save();
 }
 
-router.post('/salary', jwtAuthMiddleware, async (req, res) => {
+router.post('/salary', jwtAuthMiddleware, async (req, res, next) => {
   const { taxId, companyName } = req.body;
   const userId = req.user.id;
   try {
@@ -702,14 +702,12 @@ router.post('/salary', jwtAuthMiddleware, async (req, res) => {
   } catch (error) {
     if (error) {
       const errors = Object.values(error.errors).map((err) => err.message);
-      return res
-        .status(400)
-        .json({ message: '失敗', result: errors.join(', ') });
+      return next({
+        statusCode: 400,
+        message: errors.join(', '),
+      });
     }
-    return res.status(500).json({
-      message: 'Server error',
-      result: error.message,
-    });
+    return next(error);
   }
 });
 
