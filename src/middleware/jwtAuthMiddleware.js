@@ -3,15 +3,19 @@ const User = require('models/User');
 const config = require('config');
 
 module.exports = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  if (token != null && token !== '') {
     return next({
       statusCode: 401,
       message: 'No token provided',
     });
   }
-
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     const user = await User.findById(decoded.id);
