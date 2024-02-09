@@ -81,13 +81,6 @@ const getPostType = (post) => {
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-const postProjection = {
-  title: 1,
-  companyName: 1,
-  feeling: 1,
-  overtime: 1,
-};
-
 router.get('/salary/company/:taxId/infos', async (req, res) => {
   const taxId = req.params.taxId;
 
@@ -348,22 +341,32 @@ router.get('/salary/getTopKeyword', async (req, res) => {
   }
 });
 
-router.get('/salary/getTopPost', async (req, res) => {
+// similar to select
+// 1 indicates inclusion; 0 indicates exclusion
+const postProjection = {
+  title: 1,
+  companyName: 1,
+  feeling: 1,
+  overtime: 1,
+};
+
+async function fetchPosts(filter, sort, limit) {
+  return await Post.find(filter, postProjection).sort(sort).limit(limit);
+}
+
+router.get('/salary/getTopPost', async (req, res, next) => {
   try {
-    const latestPost = await Post.find({ status: 'approved' }, postProjection)
-      .sort({ createDate: -1 })
-      .limit(15);
+    const [latestPost, popularPost] = await Promise.all([
+      fetchPosts({ status: 'approved' }, { createDate: -1 }, 15),
+      fetchPosts({ status: 'approved' }, { seen: -1 }, 15),
+    ]);
 
-    const popularPost = await Post.find({ status: 'approved' }, postProjection)
-      .sort({ seen: -1 })
-      .limit(15);
-
-    res.json({ message: 'success', latestPost, popularPost });
-  } catch (error) {
-    res.status(500).json({
-      message: 'Server error',
-      result: error.message,
+    successHandler(res, {
+      latestPost,
+      popularPost,
     });
+  } catch (error) {
+    next(error);
   }
 });
 
