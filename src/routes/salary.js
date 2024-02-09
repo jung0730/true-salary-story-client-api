@@ -325,7 +325,7 @@ router.get('/salary/getTopKeyword', async (req, res) => {
     const keywords = await Keyword.find({})
       .sort({ rank: 1 })
       .limit(25)
-      .select('keyword -_id');
+      .select('keyword -_id'); // will include _id by default, need to manually exclude the field
 
     const keywordList = keywords.map((keyword) => keyword.keyword);
 
@@ -366,7 +366,7 @@ router.get('/salary/getTopPost', async (req, res, next) => {
       popularPost,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
