@@ -500,23 +500,23 @@ router.get('/salary/search', async (req, res) => {
 router.get('/salary/getTopCompanyType', async (req, res) => {
   try {
     const topCompanyTypes = await Company.aggregate([
-      { $match: { type: { $ne: '' } } },
+      { $match: { type: { $ne: '' } } }, // not an empty string
       {
         $group: {
           _id: '$type',
-          type: { $first: '$type' },
+          type: { $first: '$type' }, // common technique to retain the original value
           count: { $sum: 1 },
         },
       },
       { $sort: { count: -1 } },
       { $limit: 20 },
-      {
-        $project: {
-          _id: 0,
-          type: 1,
-          count: 1,
-        },
-      },
+      // {
+      //   $project: {
+      //     _id: 0,
+      //     type: 1,
+      //     count: 1,
+      //   },
+      // },
     ]);
 
     res.json({ message: 'success', companyTypes: topCompanyTypes });
@@ -542,13 +542,13 @@ router.get('/salary/getTopCompany', async (req, res) => {
       },
       { $sort: { postCount: -1 } },
       { $limit: 30 },
-      {
-        $project: {
-          taxId: 1,
-          companyName: 1,
-          postCount: 1,
-        },
-      },
+      // {
+      //   $project: {
+      //     taxId: 1,
+      //     companyName: 1,
+      //     postCount: 1,
+      //   },
+      // },
     ]);
 
     res.json({ message: 'success', companies: topCompanies });
