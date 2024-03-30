@@ -13,6 +13,7 @@ const { LINEPAY_VERSION, LINEPAY_SITE, FRONTEND_URL } = process.env;
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const successHandler = require('middleware/successHandler');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -33,65 +34,68 @@ const updateExpiredTransactions = async (userId) => {
   );
 };
 
-// Step 1: Create an order
-router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
-  const { purchaseType, amount } = req.body;
-
+function prepareOrder(purchaseType, amount) {
   const orderTimeString = dayjs().utc().format('YYYY-MM-DDTHH:mm:ss.SSS');
+  const orderId = `${orderTimeString}_${uuidv4()}`;
 
-  const ORDER_DETAILS = {
-    amount: 0,
+  let point = 0;
+  let productName = '';
+  let productQuantity = 0;
+  let productPrice = 0;
+
+  if (purchaseType === 'subscription') {
+    productName = '加薪計畫';
+    productQuantity = 1;
+    productPrice = amount;
+    point = 2000;
+  } else {
+    productName = `購買 ${point} 積分`;
+    productQuantity = amount / 150;
+    productPrice = 150;
+    point = productQuantity * 100;
+  }
+
+  const order = {
+    amount,
     currency: 'TWD',
-    orderId: `${orderTimeString}_${uuidv4()}`,
+    orderId,
     packages: [
       {
         id: uuidv4(),
-        amount: 0,
+        amount,
         products: [
           {
-            name: '',
-            quantity: 0,
-            price: 0,
+            name: productName,
+            quantity: productQuantity,
+            price: productPrice,
           },
         ],
       },
     ],
   };
 
-  // Update expired transactions
-  await updateExpiredTransactions(req.user.id);
+  return { ...order, points: point };
+}
 
-  // Check if the required parameters are provided
-  if (!purchaseType || !amount) {
-    return res.status(400).json({
-      status: 'failed',
-      message: 'Both purchaseType and amount are required parameters',
-    });
-  }
-
-  // Assign provided parameters to the ORDER_DETAILS
-  ORDER_DETAILS.amount = amount;
-  ORDER_DETAILS.packages[0].amount = amount;
-  let point = 0;
-
-  // check purchaseType
-  if (purchaseType === 'subscription') {
-    ORDER_DETAILS.packages[0].products[0].quantity = 1;
-    ORDER_DETAILS.packages[0].products[0].price = amount;
-    ORDER_DETAILS.packages[0].products[0].name = '加薪計畫';
-    point = 2000;
-  } else {
-    ORDER_DETAILS.packages[0].products[0].quantity = amount / 150;
-    ORDER_DETAILS.packages[0].products[0].price = 150;
-    point = ORDER_DETAILS.packages[0].products[0].quantity * 100;
-    ORDER_DETAILS.packages[0].products[0].name = `購買 ${point} 積分`;
-  }
-
-  const orders = JSON.parse(JSON.stringify(ORDER_DETAILS));
-
+// Step 1: Create an order
+router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { purchaseType, amount } = req.body;
 
+    if (!purchaseType || !amount) {
+      return next({
+        statusCode: 400,
+        message: 'Both purchaseType and amount are required parameters',
+      });
+    }
+
+    const order = prepareOrder(purchaseType, amount);
+
+    // Update expired transactions
+    await updateExpiredTransactions(req.user.id);
+
+    // Find user
+    const user = await User.findById(req.user.id);
     if (!user) {
       return next({
         statusCode: 404,
@@ -102,21 +106,15 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
     // Create a transaction record
     const transaction = await Transaction.create({
       user: req.user.id,
-      transactionId: orders.orderId,
-      amount: orders.amount,
-      points: point,
+      transactionId: order.orderId,
+      amount: order.amount,
+      points: order.points,
       expiryTime: new Date(Date.now() + 15 * 60 * 1000),
-      orderDetails: orders,
+      orderDetails: order,
     });
 
-    await transaction.save();
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Order created successfully',
-      data: {
-        transactionId: orders.orderId,
-      },
+    successHandler(res, {
+      transactionId: order.orderId,
     });
   } catch (error) {
     next(error);

@@ -12,6 +12,8 @@ passport.use(
       try {
         // atomic updates
         // 找不到user 執行$setOnInsert, 找得到執行$set
+        console.log(profile, 'profile');
+        console.log(profile.photos[0], 'photo');
         const user = await User.findOneAndUpdate(
           { googleId: profile.id },
           {
