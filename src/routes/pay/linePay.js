@@ -209,14 +209,13 @@ const updatePointHistory = async (transaction, status, session = null) => {
 // Step 3: Confirm the payment
 router.get('/confirm', async (req, res) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
-
-  const { transactionId, orderId } = req.query;
-  const transaction = await Transaction.findOne({
-    transactionId: orderId,
-  });
 
   try {
+    session.startTransaction();
+    const { transactionId, orderId } = req.query;
+    const transaction = await Transaction.findOne({
+      transactionId: orderId,
+    });
     // 建立 LINE Pay 請求規定的資料格式
     const uri = `/payments/${transactionId}/confirm`;
     const linePayBody = {
@@ -233,10 +232,11 @@ router.get('/confirm', async (req, res) => {
 
     // If linePay request is successful
     if (linePayRes?.data?.returnCode === '0000') {
-      // Update transaction status to success
-      transaction.status = 'success';
-      transaction.transactionRemark = linePayRes.data.returnMessage;
-      await transaction.save();
+      await updateTransaction(
+        transaction,
+        'success',
+        linePayRes.data.returnMessage,
+      );
 
       // Find user
       const user = await User.findById(transaction.user).session(session);
@@ -263,11 +263,15 @@ router.get('/confirm', async (req, res) => {
       );
       await updatePointHistory(transaction, 'failed');
       await session.abortTransaction();
-      return res.status(400).send({ message: linePayRes });
+      return next({
+        statusCode: 400,
+        message: linePayRes,
+      });
     }
   } catch (error) {
     await updateTransaction(transaction, 'failed', error);
     res.end();
+    return next(error);
   } finally {
     session.endSession();
   }
