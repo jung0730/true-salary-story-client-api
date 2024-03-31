@@ -91,10 +91,8 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
 
     const order = prepareOrder(purchaseType, amount);
 
-    // Update expired transactions
     await updateExpiredTransactions(req.user.id);
 
-    // Find user
     const user = await User.findById(req.user.id);
     if (!user) {
       return next({
@@ -104,7 +102,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
     }
 
     // Create a transaction record
-    const transaction = await Transaction.create({
+    await Transaction.create({
       user: req.user.id,
       transactionId: order.orderId,
       amount: order.amount,
@@ -124,29 +122,25 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
 // Step 2: Send the order to LINE Pay
 router.post('/:transactionId', async (req, res, next) => {
   const { transactionId } = req.params;
-
-  // Find the transaction by transactionId
-  const transaction = await Transaction.findOne({
-    transactionId: transactionId,
-  });
-
-  if (!transaction) {
-    return res.status(404).json({
-      status: 'failed',
-      message: 'Transaction not found',
-    });
-  }
-
   try {
+    const transaction = await Transaction.findOne({ transactionId });
+
+    if (!transaction) {
+      return next({
+        statusCode: 404,
+        message: 'Transaction not found',
+      });
+    }
+
     // Check if transaction has expired
     if (Date.now() > transaction.expiryTime) {
-      transaction.status = 'expired';
-      transaction.transactionRemark =
-        'Transaction not completed within 15 minutes';
-      await transaction.save();
-
-      return res.status(400).json({
-        status: 'failed',
+      await updateTransaction(
+        transaction,
+        'expired',
+        'Transaction not completed within 15 minutes',
+      );
+      return next({
+        statusCode: 400,
         message: 'Transaction has expired',
       });
     }
@@ -166,26 +160,23 @@ router.post('/:transactionId', async (req, res, next) => {
     if (linePayRes?.data?.returnCode === '0000') {
       transaction.linePayTransactionId =
         linePayRes.data.info.paymentUrl.transactionId;
-      res.status(200).json({
-        status: 'success',
-        message: 'Send order to Line Pay successfully',
-        data: {
-          paymentUrl: linePayRes.data.info.paymentUrl.web,
-        },
+      successHandler(res, {
+        paymentUrl: linePayRes.data.info.paymentUrl.web,
       });
     } else {
-      transaction.status = 'failed';
-      transaction.transactionRemark = 'Line Pay request failed';
-      res.status(400).send({
+      await updateTransaction(transaction, 'failed', 'Line Pay request failed');
+      return next({
+        statusCode: 400,
         message: 'Order is not found',
       });
     }
-    await transaction.save();
   } catch (error) {
-    transaction.status = 'failed';
-    transaction.transactionRemark = 'Error while processing the transaction';
-    await transaction.save();
-    next(error);
+    await updateTransaction(
+      transaction,
+      'failed',
+      'Error while processing the transaction',
+    );
+    return next(error);
   }
 });
 
