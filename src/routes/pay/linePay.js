@@ -49,13 +49,13 @@ function prepareOrder(purchaseType, amount) {
     productPrice = amount;
     point = 2000;
   } else {
-    productName = `購買 ${point} 積分`;
     productQuantity = amount / 150;
-    productPrice = 150;
     point = productQuantity * 100;
+    productName = `購買 ${point} 積分`;
+    productPrice = 150;
   }
 
-  const order = {
+  const ORDER_DETAIL = {
     amount,
     currency: 'TWD',
     orderId,
@@ -74,7 +74,11 @@ function prepareOrder(purchaseType, amount) {
     ],
   };
 
-  return { ...order, points: point };
+  const order = JSON.parse(JSON.stringify(ORDER_DETAIL));
+  return {
+    order,
+    point,
+  };
 }
 
 // Step 1: Create an order
@@ -89,7 +93,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
       });
     }
 
-    const order = prepareOrder(purchaseType, amount);
+    const { order, point } = prepareOrder(purchaseType, amount);
 
     await updateExpiredTransactions(req.user.id);
 
@@ -106,7 +110,7 @@ router.post('/order', jwtAuthMiddleware, async (req, res, next) => {
       user: req.user.id,
       transactionId: order.orderId,
       amount: order.amount,
-      points: order.points,
+      points: point,
       expiryTime: new Date(Date.now() + 15 * 60 * 1000),
       orderDetails: order,
     });
@@ -155,7 +159,6 @@ router.post('/:transactionId', async (req, res, next) => {
     // API Site
     const url = `${LINEPAY_SITE}/${LINEPAY_VERSION}${uri}`;
     const linePayRes = await axios.post(url, linePayBody, { headers });
-
     // Request success
     if (linePayRes?.data?.returnCode === '0000') {
       transaction.linePayTransactionId =
@@ -254,7 +257,7 @@ router.get('/confirm', async (req, res) => {
       // Commit the transaction and end the session
       await session.commitTransaction();
       // Redirect the user
-      res.redirect(`${FRONTEND_URL}/user/orders`);
+      res.redirect(`${FRONTEND_URL}/order`);
     } else {
       await updateTransaction(
         transaction,
