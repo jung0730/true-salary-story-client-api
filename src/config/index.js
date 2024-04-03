@@ -6,8 +6,7 @@ module.exports = {
     google: {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL:
-        'https://true-salary-story-client-api-production.up.railway.app/social/google/callback',
+      callbackURL: `${SERVER_URL}/social/google/callback`,
     },
   },
   jwtSecret: process.env.JWT_SECRET,
