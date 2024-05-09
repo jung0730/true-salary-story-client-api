@@ -24,9 +24,7 @@ router.get('/google/callback', (req, res, next) => {
     const encodedTokens = Buffer.from(JSON.stringify(tokens)).toString(
       'base64',
     );
-    console.log(encodedTokens, 'token');
     const redirectURL = `${FRONTEND_URL}/login?tokens=${encodedTokens}`;
-    console.log(redirectURL, 'url');
     res.redirect(redirectURL);
   })(req, res, next);
 });
